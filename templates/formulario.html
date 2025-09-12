@@ -6,8 +6,11 @@
     <title>Gerador de Documentos Acadêmicos - IPEN</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <style>
-        .campo-grupo[data-visible="false"] { display: none; }
+        /* Esconde os grupos de campos por padrão */
+        .campo-grupo { display: none; }
         .flash-error { background-color: #f8d7da; color: #721c24; border-color: #f5c6cb; }
+        /* Adiciona um asterisco vermelho para campos obrigatórios */
+        .required-label::after { content: ' *'; color: red; }
     </style>
 </head>
 <body class="bg-gray-100 font-sans">
@@ -31,7 +34,7 @@
 
         <form action="/" method="POST" class="bg-white p-8 rounded-lg shadow-lg space-y-8">
             
-            <fieldset class="border-t pt-6">
+            <fieldset>
                 <legend class="text-xl font-semibold text-gray-700 mb-4">1. Documentos para Gerar</legend>
                 <div id="documentos-container" class="grid grid-cols-2 md:grid-cols-3 gap-4">
                     {% for doc_id, doc_name in [('capa', 'Capa'), ('pagina_rosto', 'Página de Rosto'), ('ficha', 'Ficha Catalográfica'), ('resumo', 'Resumo'), ('abstract', 'Abstract'), ('contracapa', 'Contracapa')] %}
@@ -43,24 +46,158 @@
                 </div>
             </fieldset>
 
-            <!-- A estrutura completa do formulário HTML com todos os campos seria inserida aqui -->
-            <!-- Por brevidade, apenas um exemplo é mostrado -->
-            <fieldset class="border-t pt-6">
-                 <legend class="text-xl font-semibold text-gray-700 mb-4">2. Dados Gerais</legend>
+            <fieldset class="border-t pt-6 campo-grupo" data-docs="ficha resumo abstract">
+                <legend class="text-xl font-semibold text-gray-700 mb-4">2. Configurações Gerais</legend>
+                <div class="grid md:grid-cols-2 gap-6">
+                    <div class="campo-item" data-docs="ficha resumo abstract">
+                        <label for="idioma" class="block text-sm font-medium text-gray-700 mb-1 required-label">Idioma Principal</label>
+                        <select id="idioma" name="idioma" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500">
+                            <option {% if dados.idioma == 'Português' %}selected{% endif %}>Português</option>
+                            <option {% if dados.idioma == 'Inglês' %}selected{% endif %}>Inglês</option>
+                        </select>
+                    </div>
+                    <div class="campo-item" data-docs="pagina_rosto">
+                        <label for="versao" class="block text-sm font-medium text-gray-700 mb-1 required-label">Versão do Trabalho</label>
+                        <select id="versao" name="versao" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm">
+                            <option {% if dados.versao == 'Versão Original' %}selected{% endif %}>Versão Original</option>
+                            <option {% if dados.versao == 'Versão Corrigida' %}selected{% endif %}>Versão Corrigida</option>
+                        </select>
+                    </div>
+                </div>
+            </fieldset>
+
+            <fieldset class="border-t pt-6 campo-grupo" data-docs="capa pagina_rosto ficha resumo abstract contracapa">
+                <legend class="text-xl font-semibold text-gray-700 mb-4">3. Dados do Autor e Trabalho</legend>
+                <div class="grid md:grid-cols-2 gap-6">
+                    <div class="md:col-span-2 campo-item" data-docs="capa pagina_rosto ficha resumo abstract">
+                        <label for="titulo" class="block text-sm font-medium text-gray-700 mb-1 required-label">Título</label>
+                        <textarea id="titulo" name="titulo" rows="2" class="mt-1 block w-full rounded-md border-gray-300" required>{{ dados.titulo or '' }}</textarea>
+                    </div>
+                    <div class="md:col-span-2 campo-item" data-docs="capa pagina_rosto ficha resumo abstract">
+                        <label for="subtitulo" class="block text-sm font-medium text-gray-700 mb-1">Subtítulo (Opcional)</label>
+                        <input type="text" id="subtitulo" name="subtitulo" class="mt-1 block w-full rounded-md border-gray-300" value="{{ dados.subtitulo or '' }}">
+                    </div>
+                    <div class="campo-item" data-docs="capa pagina_rosto ficha resumo abstract">
+                        <label for="nome_completo" class="block text-sm font-medium text-gray-700 mb-1 required-label">Nome Completo (sem último sobrenome)</label>
+                        <input type="text" id="nome_completo" name="nome_completo" class="mt-1 block w-full rounded-md border-gray-300" required value="{{ dados.nome_completo or '' }}">
+                    </div>
+                    <div class="campo-item" data-docs="capa pagina_rosto ficha resumo abstract">
+                        <label for="sobrenome" class="block text-sm font-medium text-gray-700 mb-1 required-label">Último Sobrenome</label>
+                        <input type="text" id="sobrenome" name="sobrenome" class="mt-1 block w-full rounded-md border-gray-300" required value="{{ dados.sobrenome or '' }}">
+                    </div>
+                    <div class="campo-item" data-docs="ficha resumo abstract">
+                        <label for="nome_citacao" class="block text-sm font-medium text-gray-700 mb-1 required-label">Nome para Citação (Ex: Sobrenome, Nome)</label>
+                        <input type="text" id="nome_citacao" name="nome_citacao" class="mt-1 block w-full rounded-md border-gray-300" required value="{{ dados.nome_citacao or '' }}">
+                    </div>
+                    <div class="campo-item" data-docs="capa pagina_rosto ficha resumo abstract">
+                        <label for="ano" class="block text-sm font-medium text-gray-700 mb-1 required-label">Ano</label>
+                        <input type="number" id="ano" name="ano" class="mt-1 block w-full rounded-md border-gray-300" required value="{{ dados.ano or '' }}">
+                    </div>
+                    <div class="campo-item" data-docs="ficha resumo abstract">
+                        <label for="paginas" class="block text-sm font-medium text-gray-700 mb-1 required-label">Nº de Páginas</label>
+                        <input type="number" id="paginas" name="paginas" class="mt-1 block w-full rounded-md border-gray-300" required value="{{ dados.paginas or '' }}">
+                    </div>
+                </div>
+            </fieldset>
+            
+            <fieldset class="border-t pt-6 campo-grupo" data-docs="capa pagina_rosto ficha resumo abstract contracapa">
+                <legend class="text-xl font-semibold text-gray-700 mb-4">4. Dados Acadêmicos</legend>
                  <div class="grid md:grid-cols-2 gap-6">
-                    <div>
-                        <label for="titulo" class="block text-sm font-medium text-gray-700 mb-1">Título do Trabalho</label>
-                        <textarea id="titulo" name="titulo" rows="3" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500" required>{{ dados.titulo or '' }}</textarea>
+                    <div class="campo-item" data-docs="capa pagina_rosto ficha resumo abstract contracapa">
+                        <label for="nivel" class="block text-sm font-medium text-gray-700 mb-1 required-label">Nível</label>
+                        <select id="nivel" name="nivel" class="mt-1 block w-full rounded-md border-gray-300">
+                             <option value="">Selecione...</option>
+                             <option value="Tese (Doutorado)" {% if dados.nivel == 'Tese (Doutorado)' %}selected{% endif %}>Tese (Doutorado)</option>
+                             <option value="Dissertação (Mestrado)" {% if dados.nivel == 'Dissertação (Mestrado)' %}selected{% endif %}>Dissertação (Mestrado)</option>
+                             <option value="Dissertação (Mestrado Profissional)" {% if dados.nivel == 'Dissertação (Mestrado Profissional)' %}selected{% endif %}>Dissertação (Mestrado Profissional)</option>
+                        </select>
                     </div>
-                    <div>
-                        <label for="nome_completo" class="block text-sm font-medium text-gray-700 mb-1">Nome Completo do Autor</label>
-                        <input type="text" id="nome_completo" name="nome_completo" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm" required value="{{ dados.nome_completo or '' }}">
+                    <div class="campo-item" data-docs="capa pagina_rosto ficha resumo abstract">
+                        <label for="area" class="block text-sm font-medium text-gray-700 mb-1 required-label">Área de Concentração</label>
+                        <select id="area" name="area" class="mt-1 block w-full rounded-md border-gray-300">
+                            <option value="">Selecione o nível primeiro</option>
+                        </select>
                     </div>
-                    <!-- Adicione todos os outros campos aqui (sobrenome, ano, etc.) -->
+                    <div class="campo-item" data-docs="capa pagina_rosto ficha">
+                        <label for="orientador_tipo" class="block text-sm font-medium text-gray-700 mb-1 required-label">Título do Orientador</label>
+                         <select name="orientador_tipo" class="mt-1 block w-full rounded-md border-gray-300">
+                             <option {% if dados.orientador_tipo == 'Prof. Dr.' %}selected{% endif %}>Prof. Dr.</option>
+                             <option {% if dados.orientador_tipo == 'Profa. Dra.' %}selected{% endif %}>Profa. Dra.</option>
+                         </select>
+                    </div>
+                     <div class="campo-item" data-docs="capa pagina_rosto ficha">
+                        <label for="orientador" class="block text-sm font-medium text-gray-700 mb-1 required-label">Nome do Orientador</label>
+                        <input type="text" name="orientador" class="mt-1 block w-full rounded-md border-gray-300" required value="{{ dados.orientador or '' }}">
+                    </div>
+                     <div class="campo-item" data-docs="capa pagina_rosto ficha">
+                        <label for="coorientador_tipo" class="block text-sm font-medium text-gray-700 mb-1">Título do Coorientador</label>
+                         <select name="coorientador_tipo" class="mt-1 block w-full rounded-md border-gray-300">
+                             <option {% if dados.coorientador_tipo == 'Prof. Dr.' %}selected{% endif %}>Prof. Dr.</option>
+                             <option {% if dados.coorientador_tipo == 'Profa. Dra.' %}selected{% endif %}>Profa. Dra.</option>
+                         </select>
+                    </div>
+                     <div class="campo-item" data-docs="capa pagina_rosto ficha">
+                        <label for="coorientador" class="block text-sm font-medium text-gray-700 mb-1">Nome do Coorientador (Opcional)</label>
+                        <input type="text" name="coorientador" class="mt-1 block w-full rounded-md border-gray-300" value="{{ dados.coorientador or '' }}">
+                    </div>
+                 </div>
+            </fieldset>
+
+            <fieldset class="border-t pt-6 campo-grupo" data-docs="ficha resumo abstract">
+                <legend class="text-xl font-semibold text-gray-700 mb-4">5. Resumos e Palavras-chave</legend>
+                <div class="space-y-6">
+                    <div class="campo-item" data-docs="resumo abstract">
+                        <label for="titulo_traduzido" class="block text-sm font-medium text-gray-700 mb-1 required-label">Título Traduzido</label>
+                        <textarea name="titulo_traduzido" rows="2" class="mt-1 block w-full rounded-md border-gray-300">{{ dados.titulo_traduzido or '' }}</textarea>
+                    </div>
+                    <div class="campo-item" data-docs="resumo abstract">
+                        <label for="subtitulo_traduzido" class="block text-sm font-medium text-gray-700 mb-1">Subtítulo Traduzido (Opcional)</label>
+                        <input type="text" name="subtitulo_traduzido" class="mt-1 block w-full rounded-md border-gray-300" value="{{ dados.subtitulo_traduzido or '' }}">
+                    </div>
+                    <div class="campo-item" data-docs="resumo abstract">
+                        <label for="resumo" class="block text-sm font-medium text-gray-700 mb-1 required-label">Resumo (Idioma Principal)</label>
+                        <textarea name="resumo" rows="5" class="mt-1 block w-full rounded-md border-gray-300">{{ dados.resumo or '' }}</textarea>
+                    </div>
+                    <div class="campo-item" data-docs="resumo abstract">
+                        <label for="abstract" class="block text-sm font-medium text-gray-700 mb-1 required-label">Abstract (Idioma Traduzido)</label>
+                        <textarea name="abstract" rows="5" class="mt-1 block w-full rounded-md border-gray-300">{{ dados.abstract or '' }}</textarea>
+                    </div>
+                    <div class="grid md:grid-cols-2 gap-6 campo-item" data-docs="ficha resumo abstract">
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-2">Palavras-chave (PT)</label>
+                            {% for i in range(1, 6) %}
+                                <input type="text" name="chave{{i}}" placeholder="Palavra-chave {{i}}" class="mt-1 block w-full rounded-md border-gray-300" value="{{ dados['chave' ~ i] or '' }}">
+                            {% endfor %}
+                        </div>
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-2">Keywords (EN)</label>
+                             {% for i in range(1, 6) %}
+                                <input type="text" name="keyword{{i}}" placeholder="Keyword {{i}}" class="mt-1 block w-full rounded-md border-gray-300" value="{{ dados['keyword' ~ i] or '' }}">
+                            {% endfor %}
+                        </div>
+                    </div>
+                </div>
+            </fieldset>
+
+             <fieldset class="border-t pt-6 campo-grupo" data-docs="ficha">
+                <legend class="text-xl font-semibold text-gray-700 mb-4">6. Dados da Ficha Catalográfica</legend>
+                 <div class="grid md:grid-cols-2 gap-6">
+                     <div class="campo-item" data-docs="ficha">
+                        <label for="licenca" class="block text-sm font-medium text-gray-700 mb-1 required-label">Licença</label>
+                         <select name="licenca" class="mt-1 block w-full rounded-md border-gray-300">
+                            {% for lic in ["CC0 1.0", "CC-BY 4.0", "CC-BY-SA 4.0", "CC-BY-ND 4.0", "CC-BY-NC 4.0", "CC-BY-NC-SA 4.0", "CC-BY-NC-ND 4.0"] %}
+                             <option {% if dados.licenca == lic %}selected{% endif %}>{{lic}}</option>
+                            {% endfor %}
+                         </select>
+                     </div>
+                     <div class="campo-item" data-docs="ficha">
+                        <label for="bolsa" class="block text-sm font-medium text-gray-700 mb-1">Agência de Fomento (Opcional)</label>
+                        <input type="text" name="bolsa" class="mt-1 block w-full rounded-md border-gray-300" value="{{ dados.bolsa or '' }}">
+                    </div>
                  </div>
             </fieldset>
             
-            <div class="border-t pt-6 text-center">
+            <div class="border-t pt-8 text-center">
                 <button type="submit" class="bg-blue-700 hover:bg-blue-800 text-white font-bold py-3 px-8 rounded-lg shadow-md transition-transform transform hover:scale-105">
                     Gerar Documentos
                 </button>
@@ -68,6 +205,63 @@
         </form>
     </div>
 
-    <!-- O JavaScript para mostrar/ocultar campos pode ser adicionado aqui se necessário -->
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            const checkboxes = document.querySelectorAll('#documentos-container input[type="checkbox"]');
+            const gruposDeCampos = document.querySelectorAll('.campo-grupo');
+            const camposIndividuais = document.querySelectorAll('.campo-item');
+            const nivelSelect = document.getElementById('nivel');
+            const areaSelect = document.getElementById('area');
+
+            const areasPorNivel = {
+                "Tese (Doutorado)": ["Aplicações", "Materiais", "Reatores"],
+                "Dissertação (Mestrado)": ["Aplicações", "Materiais", "Reatores"],
+                "Dissertação (Mestrado Profissional)": ["Medicina Nuclear e Radiofarmácia", "Processos de Radiação na Saúde"]
+            };
+
+            function atualizarVisibilidade() {
+                const docsSelecionados = Array.from(checkboxes)
+                                              .filter(cb => cb.checked)
+                                              .map(cb => cb.value);
+                
+                if (docsSelecionados.length === 0) {
+                    gruposDeCampos.forEach(g => g.style.display = 'none');
+                    return;
+                }
+
+                gruposDeCampos.forEach(grupo => {
+                    const docsRequeridosGrupo = grupo.dataset.docs.split(' ');
+                    const mostrarGrupo = docsRequeridosGrupo.some(doc => docsSelecionados.includes(doc));
+                    grupo.style.display = mostrarGrupo ? 'block' : 'none';
+                });
+
+                camposIndividuais.forEach(campo => {
+                    const docsRequeridosCampo = campo.dataset.docs.split(' ');
+                    const mostrarCampo = docsRequeridosCampo.some(doc => docsSelecionados.includes(doc));
+                    campo.style.display = mostrarCampo ? 'block' : 'none';
+                });
+            }
+
+            function atualizarAreas() {
+                const nivel = nivelSelect.value;
+                areaSelect.innerHTML = '<option value="">Selecione...</option>';
+                if (nivel && areasPorNivel[nivel]) {
+                    areasPorNivel[nivel].forEach(area => {
+                        const option = document.createElement('option');
+                        option.value = area;
+                        option.textContent = area;
+                        areaSelect.appendChild(option);
+                    });
+                }
+            }
+
+            checkboxes.forEach(cb => cb.addEventListener('change', atualizarVisibilidade));
+            nivelSelect.addEventListener('change', atualizarAreas);
+
+            // Chamadas iniciais
+            atualizarVisibilidade();
+            atualizarAreas();
+        });
+    </script>
 </body>
 </html>

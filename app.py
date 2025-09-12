@@ -97,9 +97,6 @@ def gerar_capa(dados, buffer):
     c.drawCentredString(width/2, 5.5*cm, "São Paulo"); c.drawCentredString(width/2, 5*cm, dados.get("ano",""))
     c.save()
 
-# --- (As outras funções de geração de PDF como gerar_pagina_rosto, etc. devem ser coladas aqui) ---
-# --- Incluí todas as outras funções abaixo para o código ficar completo ---
-
 def gerar_pagina_rosto(dados, buffer):
     c = canvas.Canvas(buffer, pagesize=A4)
     width, height = A4
@@ -200,7 +197,7 @@ def gerar_abstract(dados, idioma_principal, buffer):
     story = [
         Paragraph("RESUMO" if idioma_principal == "Inglês" else "ABSTRACT", ParagraphStyle(name='Title', fontName='Helvetica-Bold', fontSize=12, alignment=TA_CENTER, spaceAfter=1*cm)),
         Paragraph(obter_texto_citacao(dados, incluir_disponivel_em=False, titulo_override=dados.get('titulo_traduzido'), subtitulo_override=dados.get('subtitulo_traduzido')), ParagraphStyle(name='Citacao', fontName='Helvetica', fontSize=12, leading=13, alignment=TA_JUSTIFY, spaceAfter=1*cm)),
-        Paragraph(dados.get('abstract', ''), ParagraphStyle(name='Body', fontName='Helvetica', fontSize=12, leading=18, alignment=TA_JUSTIFY, spaceAfter=1*cm))
+        Paragraph(dados.get('abstract', ''), ParagraphStyle(name='Body', parent=styles['Normal'], fontName='Helvetica', fontSize=12, leading=18, alignment=TA_JUSTIFY, spaceAfter=1*cm))
     ]
     chaves_base, rotulo = ('chave', "<b>Palavras-chave:</b> ") if idioma_principal == "Inglês" else ('keyword', "<b>Keywords:</b> ")
     chaves_filtradas = [dados.get(f'{chaves_base}{i+1}', '') for i in range(5) if dados.get(f'{chaves_base}{i+1}', '')]
@@ -229,7 +226,6 @@ def gerar_contracapa(dados, buffer):
     p.drawOn(c, 2*cm, b_margin + 4*cm)
     c.save()
 
-
 @app.route('/', methods=['GET', 'POST'])
 def formulario():
     if request.method == 'POST':
@@ -240,42 +236,28 @@ def formulario():
             flash('Você deve selecionar pelo menos um documento para gerar.', 'error')
             return render_template('formulario.html', dados=dados)
 
-        # AQUI PODEMOS ADICIONAR A VALIDAÇÃO COMPLETA
-        # Por simplicidade, essa parte foi omitida, mas a lógica do seu script Tkinter seria adaptada aqui usando flash()
-
         try:
             generated_files = {}
             idioma_principal = dados.get('idioma', 'Português')
 
-            # Mapeia o nome do documento para a função que o gera
             funcoes_geradoras = {
-                'capa': gerar_capa,
-                'pagina_rosto': gerar_pagina_rosto,
-                'ficha': gerar_ficha_catalografica,
-                'contracapa': gerar_contracapa
+                'capa': gerar_capa, 'pagina_rosto': gerar_pagina_rosto,
+                'ficha': gerar_ficha_catalografica, 'contracapa': gerar_contracapa
             }
-
             for doc_name, func in funcoes_geradoras.items():
                 if doc_name in documentos_selecionados:
-                    buffer = io.BytesIO()
-                    func(dados, buffer)
-                    buffer.seek(0)
+                    buffer = io.BytesIO(); func(dados, buffer); buffer.seek(0)
                     generated_files[f'{doc_name}.pdf'] = buffer
             
-            # Lógica especial para resumo e abstract
             if 'resumo' in documentos_selecionados:
                 buffer = io.BytesIO()
-                func = gerar_resumo if idioma_principal == 'Português' else gerar_abstract
-                func(dados, idioma_principal, buffer)
-                buffer.seek(0)
-                generated_files['resumo.pdf'] = buffer
+                (gerar_resumo if idioma_principal == 'Português' else gerar_abstract)(dados, idioma_principal, buffer)
+                buffer.seek(0); generated_files['resumo.pdf'] = buffer
             
             if 'abstract' in documentos_selecionados:
                 buffer = io.BytesIO()
-                func = gerar_abstract if idioma_principal == 'Português' else gerar_resumo
-                func(dados, idioma_principal, buffer)
-                buffer.seek(0)
-                generated_files['abstract.pdf'] = buffer
+                (gerar_abstract if idioma_principal == 'Português' else gerar_resumo)(dados, idioma_principal, buffer)
+                buffer.seek(0); generated_files['abstract.pdf'] = buffer
 
             if len(generated_files) == 1:
                 filename, buffer = list(generated_files.items())[0]
