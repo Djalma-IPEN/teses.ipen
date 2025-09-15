@@ -196,14 +196,13 @@ def gerar_ficha_catalografica(dados, buffer):
     chaves_filtradas = [dados.get(f'{chaves_base}{i+1}', '') for i in range(5) if dados.get(f'{chaves_base}{i+1}', '')]
     chaves_formatadas = " ".join([f"{i+1}. {chave.strip()}." for i, chave in enumerate(chaves_filtradas)])
     
-    partes_texto = [f"{dados.get('sobrenome','')}, {dados.get('nome_completo','')}<br/><br/>", f"{titulo_completo_ficha} / {dados.get('nome_completo','')} {dados.get('sobrenome','')}"]
+    partes_texto = [f"{dados.get('sobrenome','')}, {dados.get('nome_completo','')}<br/>", f"{titulo_completo_ficha} / {dados.get('nome_completo','')} {dados.get('sobrenome','')}"]
     if orientador: partes_texto.append(f". {texto_orientador}")
     if coorientador: partes_texto.append(f". {texto_coorientador}")
-    partes_texto.append(f". São Paulo, {dados.get('ano','')}.<br/><br/>")
+    partes_texto.append(f". São Paulo, {dados.get('ano','')}.<br/>")
     
-    texto_ficha = f"""{"".join(partes_texto)}{dados.get('paginas','')} p.<br/><br/>{dados.get('nivel','')} - {programa} -- Instituto de Pesquisas Energéticas e Nucleares. Universidade de São Paulo.<br/><br/>&nbsp;&nbsp;&nbsp;{chaves_formatadas}{romanos}""".strip()
-    p_ficha = Paragraph(texto_ficha.replace("\n", ""), ParagraphStyle(name='Ficha', fontName='Courier', fontSize=9, leading=11))
-    w, h = p_ficha.wrapOn(c, largura_quadro-20, height); altura_quadro = max(6.5 * cm, h + 20)
+    texto_ficha = f"""{"".join(partes_texto)}<br/>{dados.get('paginas','')} p.<br/><br/>{dados.get('nivel','')} - {programa} -- Instituto de Pesquisas Energéticas e Nucleares. Universidade de São Paulo.<br/><br/>&nbsp;&nbsp;&nbsp;{chaves_formatadas}<br/>{romanos}""".strip()
+    p_ficha = Paragraph(texto_ficha.replace("\n", ""), ParagraphStyle(name='Ficha', fontName='Courier', fontSize=9, leading=11)); w, h = p_ficha.wrapOn(c, largura_quadro-20, height); altura_quadro = max(6.5 * cm, h + 20)
     c.rect(x_quadro, y_quadro_topo, largura_quadro, altura_quadro); p_ficha.drawOn(c, x_quadro + 10, y_quadro_topo + altura_quadro - 10 - h)
     
     c.setFont("Helvetica", 10); c.drawCentredString(width/2, y_quadro_topo + altura_quadro + 30, "Ficha catalográfica elaborada pelo Sistema de geração automática da Biblioteca IPEN,")
@@ -261,9 +260,15 @@ def gerar_contracapa(dados, buffer):
 def formulario():
     if request.method == 'POST':
         dados = request.form.to_dict()
+        # **CORREÇÃO PRINCIPAL AQUI**
+        # Limpa o HTML dos campos para garantir compatibilidade com ReportLab
+        for key, value in dados.items():
+            if isinstance(value, str):
+                # Converte <br> para <br/> e remove quebras de linha que o browser possa adicionar
+                dados[key] = value.replace('<br>', '<br/>').replace('\n', '').replace('\r', '')
+
         documentos_selecionados = request.form.getlist('documentos')
 
-        # --- VALIDAÇÃO COMPLETA E CORRIGIDA ---
         if not documentos_selecionados:
             flash('Erro: Você deve selecionar pelo menos um documento para gerar.', 'error')
             return render_template('formulario.html', dados=dados)
@@ -297,7 +302,6 @@ def formulario():
             elif 'ficha' in documentos_selecionados:
                 if dados.get('idioma') == 'Português' and len(chaves_pt) < 3: flash("Erro: Pelo menos 3 Palavras-chave (PT) são obrigatórias para a Ficha.", 'error'); return render_template('formulario.html', dados=dados)
                 if dados.get('idioma') == 'Inglês' and len(chaves_en) < 3: flash("Erro: Pelo menos 3 Keywords (EN) são obrigatórias para a Ficha.", 'error'); return render_template('formulario.html', dados=dados)
-        # --- FIM DA VALIDAÇÃO ---
 
         try:
             generated_files = {}; idioma_principal = dados.get('idioma', 'Português')
