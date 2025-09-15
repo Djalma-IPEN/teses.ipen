@@ -2,7 +2,7 @@ import os
 import io
 import zipfile
 from flask import Flask, render_template, request, send_file, flash
-from bs4 import BeautifulSoup
+from bs4 import BeautifulSoup, NavigableString
 
 # --- Imports do ReportLab ---
 from reportlab.lib.pagesizes import A4
@@ -32,36 +32,37 @@ CAMPOS_POR_DOCUMENTO = {
 
 def clean_html_for_reportlab(html_string):
     """
-    Limpa o HTML vindo do formulário, removendo atributos não suportados
-    pelo parser do ReportLab para evitar erros.
+    Limpa o HTML, removendo atributos e tags não suportados pelo ReportLab
+    e tratando quebras de linha indesejadas de divs e ps.
     """
     if not html_string or not isinstance(html_string, str):
         return html_string
     
     soup = BeautifulSoup(html_string, 'html.parser')
     
-    # Atributos permitidos na tag <font> pelo ReportLab
-    allowed_font_attrs = {'backcolor', 'color', 'face', 'fontname', 'fontsize', 'name', 'size', 'style', 'textcolor'}
-    
-    for tag in soup.find_all(True): # Itera sobre todas as tags
-        # Para a tag <font>, remove atributos não permitidos
+    # Remove atributos inválidos e tags que não preservam conteúdo
+    for tag in soup.find_all(True):
         if tag.name == 'font':
+            allowed_attrs = {'color', 'face', 'size'}
             attrs = dict(tag.attrs)
-            for attr, value in attrs.items():
-                if attr.lower() not in allowed_font_attrs:
+            for attr in attrs:
+                if attr.lower() not in allowed_attrs:
                     del tag[attr]
-        # Remove a tag inteira se não for uma das permitidas, mantendo seu conteúdo
-        elif tag.name not in ['b', 'i', 'u', 'strong', 'em', 'sup', 'sub', 'br', 'p', 'a']:
-            tag.unwrap()
+        elif tag.name not in ['b', 'i', 'u', 'strong', 'em', 'sup', 'sub', 'br', 'p', 'div', 'a']:
+             tag.unwrap()
 
-    # Converte de volta para string, pegando apenas o conteúdo do body
+    # Substitui tags <p> e <div> por seu conteúdo seguido de um espaço para evitar junção de palavras
+    for tag in soup.find_all(['p', 'div']):
+        tag.replace_with(NavigableString(tag.decode_contents() + ' '))
+
     if soup.body:
-        cleaned_html = soup.body.encode_contents().decode('utf-8')
+        cleaned_html = soup.body.encode_contents().decode('utf-8').strip()
     else:
-        cleaned_html = str(soup)
+        cleaned_html = str(soup).strip()
 
-    # Garante que <br> seja <br/> e remove quebras de linha
-    return cleaned_html.replace('<br>', '<br/>').replace('\n', '').replace('\r', '')
+    # Garante <br/> e remove múltiplos espaços
+    return cleaned_html.replace('<br>', '<br/>').replace('\n', ' ').replace('\r', ' ').strip()
+
 
 def static_file_path(filename):
     """ Retorna o caminho absoluto para um arquivo na pasta static. """
@@ -105,8 +106,13 @@ def gerar_capa(dados, buffer):
     width, height = A4
     nivel = dados.get("nivel", "")
     
-    cores = {"Mestrado Profissional": (129/255, 0/255, 64/255), "Mestrado": (30/255, 143/255, 113/255)}
-    cor_faixas = cores.get(nivel, (52/255, 14/255, 113/255))
+    # Lógica de cores corrigida
+    if "Mestrado Profissional" in nivel:
+        cor_faixas = (129/255, 0/255, 64/255)
+    elif "Mestrado" in nivel:
+        cor_faixas = (30/255, 143/255, 113/255)
+    else: # Default para Tese/Doutorado
+        cor_faixas = (52/255, 14/255, 113/255)
     c.setFillColorRGB(*cor_faixas)
     
     top_margin, f_fina, f_grossa, esp, f_comp = 16*mm, 2.7*mm, 4.8*mm, 1.2*mm, 78*mm
@@ -141,7 +147,7 @@ def gerar_capa(dados, buffer):
     titulo_completo = dados.get('titulo','') + (f": {dados.get('subtitulo','')}" if dados.get('subtitulo') else ""); p_titulo = Paragraph(titulo_completo, s_titulo)
     w, h = p_titulo.wrapOn(c, width-4*cm, y); p_titulo.drawOn(c, 2*cm, y-h); y -= h + 2*cm
     
-    autor = f"{dados.get('nome_completo','')} {dados.get('sobrenome','')}".upper(); p_autor = Paragraph(autor, s_autor)
+    autor = f"{dados.get('nome_completo','')} {dados.get('sobrenome','')} ridiculously long".upper(); p_autor = Paragraph(autor, s_autor)
     w, h = p_autor.wrapOn(c, width-4*cm, y); p_autor.drawOn(c, 2*cm, y-h); y -= h + 4.5*cm
     
     if "Mestrado Profissional" in nivel: t_final = f"Dissertação apresentada como parte dos requisitos para obtenção do Grau de Mestre Profissional em Tecnologia das Radiações em Ciências da Saúde na Área de {dados.get('area','')}"
@@ -183,7 +189,7 @@ def gerar_pagina_rosto(dados, buffer):
     p_versao = Paragraph(versao_texto, style_versao)
     w, h = p_versao.wrapOn(c, width-4*cm, y); p_versao.drawOn(c, 2*cm, y - h); y -= h + 2*cm
     
-    autor = f"{dados.get('nome_completo','')} {dados.get('sobrenome','')}".upper()
+    autor = f"{dados.get('nome_completo','')} {dados.get('sobrenome','')} ridiculously long".upper()
     p_autor = Paragraph(autor, style_normal_center)
     w, h = p_autor.wrapOn(c, width-4*cm, y); p_autor.drawOn(c, 2*cm, y - h); y -= h + 4.5*cm
     
@@ -272,9 +278,16 @@ def gerar_contracapa(dados, buffer):
     c = canvas.Canvas(buffer, pagesize=A4)
     width, height = A4
     nivel = dados.get("nivel", "")
-    cores = {"Mestrado Profissional": (129/255, 0/255, 64/255), "Mestrado": (30/255, 143/255, 113/255), "Tese": (52/255, 14/255, 113/255)}
-    cor_faixas = next((cor for key, cor in cores.items() if key in nivel), cores["Tese"])
+    
+    # Lógica de cores corrigida
+    if "Mestrado Profissional" in nivel:
+        cor_faixas = (129/255, 0/255, 64/255)
+    elif "Mestrado" in nivel:
+        cor_faixas = (30/255, 143/255, 113/255)
+    else: # Default para Tese/Doutorado
+        cor_faixas = (52/255, 14/255, 113/255)
     c.setFillColorRGB(*cor_faixas)
+
     f_fina, f_grossa, esp = 2.7*mm, 4.8*mm, 1.2*mm
     c.rect(0, height - 16*mm - f_fina, width, f_fina, fill=1, stroke=0)
     c.rect(0, height - 16*mm - f_fina - esp - f_grossa, width, f_grossa, fill=1, stroke=0)
