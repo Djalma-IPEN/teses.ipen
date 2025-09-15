@@ -10,42 +10,47 @@
         .campo-grupo[data-visible="false"] { display: none; }
         .flash-error { background-color: #f8d7da; color: #721c24; border-color: #f5c6cb; }
         
-        /* Container para posicionar a barra de ferramentas de formatação */
-        .editor-container {
-            position: relative;
-        }
-        /* Nova barra de ferramentas de formatação */
+        .editor-container { position: relative; }
+
+        /* Barra de ferramentas de formatação */
         .formatting-buttons {
             position: absolute;
-            bottom: 100%; /* Posiciona ACIMA do textarea */
+            bottom: 100%;
             left: 0;
-            margin-bottom: 6px; /* Espaço entre a barra e o campo */
-            display: flex; /* Botões na horizontal */
+            margin-bottom: 6px;
+            display: flex;
             gap: 6px;
-            background-color: #e5e7eb; /* Cor cinza para destaque */
+            background-color: #e5e7eb;
             padding: 6px;
             border-radius: 8px;
             box-shadow: 0 2px 5px rgba(0,0,0,0.1);
             z-index: 10;
         }
         .format-btn {
-            width: 32px;
-            height: 32px;
-            display: flex;
-            align-items: center;
-            justify-content: center;
+            width: 32px; height: 32px; display: flex; align-items: center; justify-content: center;
+            border: 1px solid #d1d5db; background-color: #f9fafb; border-radius: 5px;
+            font-size: 14px; cursor: pointer; transition: all 0.2s ease;
+        }
+        .format-btn:hover { background-color: #f3f4f6; border-color: #9ca3af; transform: scale(1.05); }
+
+        /* Estilo para o editor visual (div contenteditable) */
+        .visual-editor {
+            min-height: 42px; /* Altura mínima similar a um input */
+            padding: 0.5rem 0.75rem;
             border: 1px solid #d1d5db;
-            background-color: #f9fafb;
-            border-radius: 5px;
-            font-size: 14px;
-            cursor: pointer;
-            transition: all 0.2s ease;
+            border-radius: 0.375rem;
+            background-color: #f9fafb; /* Fundo cinza claro */
+            box-shadow: inset 0 2px 4px 0 rgba(0,0,0,0.05);
         }
-        .format-btn:hover {
-            background-color: #f3f4f6;
-            border-color: #9ca3af;
-            transform: scale(1.05);
+        .visual-editor[data-placeholder]:empty:before {
+            content: attr(data-placeholder);
+            color: #9ca3af;
         }
+        .visual-editor sup { vertical-align: super; font-size: smaller; }
+        .visual-editor sub { vertical-align: sub; font-size: smaller; }
+
+        /* Esconde o textarea real */
+        .hidden-textarea { display: none; }
     </style>
 </head>
 <body class="bg-gray-100 font-sans">
@@ -60,9 +65,7 @@
         {% with messages = get_flashed_messages(with_categories=true) %}
             {% if messages %}
                 {% for category, message in messages %}
-                    <div class="flash-{{ category }} p-4 mb-4 border rounded" role="alert">
-                        {{ message }}
-                    </div>
+                    <div class="flash-{{ category }} p-4 mb-4 border rounded" role="alert">{{ message }}</div>
                 {% endfor %}
             {% endif %}
         {% endwith %}
@@ -75,78 +78,41 @@
                     {% for doc_id, doc_name in [('capa', 'Capa'), ('pagina_rosto', 'Página de Rosto'), ('ficha', 'Ficha Catalográfica'), ('resumo', 'Resumo'), ('abstract', 'Abstract'), ('contracapa', 'Contracapa')] %}
                     <label class="flex items-center space-x-3 p-3 bg-gray-50 rounded-lg border hover:bg-gray-100 cursor-pointer">
                         <input type="checkbox" name="documentos" value="{{ doc_id }}" class="form-checkbox h-5 w-5 text-blue-600" checked>
-                        <span class="text-gray-800">{{ doc_name }}</span>
+                        <span>{{ doc_name }}</span>
                     </label>
                     {% endfor %}
                 </div>
             </fieldset>
 
-            <!-- Painel de botões de formatação (inicialmente oculto) -->
             <div id="formatting-buttons-panel" class="formatting-buttons" style="display: none;">
-                <button type="button" class="format-btn font-bold" title="Negrito" onmousedown="formatText('b')">B</button>
-                <button type="button" class="format-btn italic" title="Itálico" onmousedown="formatText('i')">I</button>
-                <button type="button" class="format-btn" title="Sobrescrito" onmousedown="formatText('sup')">x²</button>
-                <button type="button" class="format-btn" title="Subscrito" onmousedown="formatText('sub')">x₂</button>
+                <button type="button" class="format-btn font-bold" title="Negrito" onmousedown="event.preventDefault(); document.execCommand('bold')">B</button>
+                <button type="button" class="format-btn italic" title="Itálico" onmousedown="event.preventDefault(); document.execCommand('italic')">I</button>
+                <button type="button" class="format-btn" title="Sobrescrito" onmousedown="event.preventDefault(); document.execCommand('superscript')">x²</button>
+                <button type="button" class="format-btn" title="Subscrito" onmousedown="event.preventDefault(); document.execCommand('subscript')">x₂</button>
             </div>
 
-            <!-- Seções de campos dinâmicos -->
             {% set dados = dados or {} %}
             <div id="campos-dinamicos-container" class="space-y-8">
                 
                 <fieldset class="border-t pt-6 campo-grupo" data-campos="idioma,versao,nivel,area,licenca">
                     <legend class="text-xl font-semibold text-gray-700 mb-4">2. Dados Gerais</legend>
                     <div class="grid md:grid-cols-2 gap-6">
-                        <div class="campo-item" data-campo="idioma">
-                            <label for="idioma" class="block text-sm font-medium text-gray-700 mb-1">Idioma principal do trabalho</label>
-                            <select id="idioma" name="idioma" class="mt-1 block w-full bg-gray-50 rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500">
-                                <option value="" disabled {% if not dados.get('idioma') %}selected{% endif %}>Selecione...</option>
-                                <option value="Português" {% if dados.get('idioma') == 'Português' %}selected{% endif %}>Português</option>
-                                <option value="Inglês" {% if dados.get('idioma') == 'Inglês' %}selected{% endif %}>Inglês</option>
-                            </select>
-                        </div>
-                        <div class="campo-item" data-campo="versao">
-                            <label for="versao" class="block text-sm font-medium text-gray-700 mb-1">Versão do trabalho</label>
-                            <select id="versao" name="versao" class="mt-1 block w-full bg-gray-50 rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500">
-                                <option value="" disabled {% if not dados.get('versao') %}selected{% endif %}>Selecione...</option>
-                                <option value="Versão Corrigida" {% if dados.get('versao') == 'Versão Corrigida' %}selected{% endif %}>Versão Corrigida</option>
-                                <option value="Versão Original" {% if dados.get('versao') == 'Versão Original' %}selected{% endif %}>Versão Original</option>
-                            </select>
-                        </div>
-                        <div class="campo-item" data-campo="nivel">
-                            <label for="nivel" class="block text-sm font-medium text-gray-700 mb-1">Nível</label>
-                            <select id="nivel" name="nivel" class="mt-1 block w-full bg-gray-50 rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500">
-                                <option value="" disabled {% if not dados.get('nivel') %}selected{% endif %}>Selecione...</option>
-                                <option value="Tese (Doutorado)" {% if dados.get('nivel') == 'Tese (Doutorado)' %}selected{% endif %}>Tese (Doutorado)</option>
-                                <option value="Dissertação (Mestrado)" {% if dados.get('nivel') == 'Dissertação (Mestrado)' %}selected{% endif %}>Dissertação (Mestrado)</option>
-                                <option value="Dissertação (Mestrado Profissional)" {% if dados.get('nivel') == 'Dissertação (Mestrado Profissional)' %}selected{% endif %}>Dissertação (Mestrado Profissional)</option>
-                            </select>
-                        </div>
-                        <div class="campo-item" data-campo="area">
-                            <label for="area" class="block text-sm font-medium text-gray-700 mb-1">Área de concentração</label>
-                            <select id="area" name="area" class="mt-1 block w-full bg-gray-50 rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500">
-                                <option value="">Selecione um nível primeiro...</option>
-                            </select>
-                        </div>
-                         <div class="campo-item" data-campo="licenca">
-                            <label for="licenca" class="block text-sm font-medium text-gray-700 mb-1">Licença</label>
-                            <select id="licenca" name="licenca" class="mt-1 block w-full bg-gray-50 rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500">
-                                 <option value="" disabled {% if not dados.get('licenca') %}selected{% endif %}>Selecione...</option>
-                                 {% for lic in ["CC0 1.0", "CC-BY 4.0", "CC-BY-SA 4.0", "CC-BY-ND 4.0", "CC-BY-NC 4.0", "CC-BY-NC-SA 4.0", "CC-BY-NC-ND 4.0"] %}
-                                 <option value="{{ lic }}" {% if dados.get('licenca') == lic %}selected{% endif %}>{{ lic }}</option>
-                                 {% endfor %}
-                            </select>
-                        </div>
+                        <div class="campo-item" data-campo="idioma"><label for="idioma" class="block text-sm font-medium text-gray-700 mb-1">Idioma principal do trabalho<span class="required-asterisk text-red-500 ml-1 hidden">*</span></label><select id="idioma" name="idioma" class="mt-1 block w-full bg-gray-50 rounded-md border-gray-300 shadow-sm"><option value="" disabled {% if not dados.get('idioma') %}selected{% endif %}>Selecione...</option><option value="Português" {% if dados.get('idioma') == 'Português' %}selected{% endif %}>Português</option><option value="Inglês" {% if dados.get('idioma') == 'Inglês' %}selected{% endif %}>Inglês</option></select></div>
+                        <div class="campo-item" data-campo="versao"><label for="versao" class="block text-sm font-medium text-gray-700 mb-1">Versão do trabalho<span class="required-asterisk text-red-500 ml-1 hidden">*</span></label><select id="versao" name="versao" class="mt-1 block w-full bg-gray-50 rounded-md border-gray-300 shadow-sm"><option value="" disabled {% if not dados.get('versao') %}selected{% endif %}>Selecione...</option><option value="Versão Corrigida" {% if dados.get('versao') == 'Versão Corrigida' %}selected{% endif %}>Versão Corrigida</option><option value="Versão Original" {% if dados.get('versao') == 'Versão Original' %}selected{% endif %}>Versão Original</option></select></div>
+                        <div class="campo-item" data-campo="nivel"><label for="nivel" class="block text-sm font-medium text-gray-700 mb-1">Nível<span class="required-asterisk text-red-500 ml-1 hidden">*</span></label><select id="nivel" name="nivel" class="mt-1 block w-full bg-gray-50 rounded-md border-gray-300 shadow-sm"><option value="" disabled {% if not dados.get('nivel') %}selected{% endif %}>Selecione...</option><option value="Tese (Doutorado)" {% if dados.get('nivel') == 'Tese (Doutorado)' %}selected{% endif %}>Tese (Doutorado)</option><option value="Dissertação (Mestrado)" {% if dados.get('nivel') == 'Dissertação (Mestrado)' %}selected{% endif %}>Dissertação (Mestrado)</option><option value="Dissertação (Mestrado Profissional)" {% if dados.get('nivel') == 'Dissertação (Mestrado Profissional)' %}selected{% endif %}>Dissertação (Mestrado Profissional)</option></select></div>
+                        <div class="campo-item" data-campo="area"><label for="area" class="block text-sm font-medium text-gray-700 mb-1">Área de concentração<span class="required-asterisk text-red-500 ml-1 hidden">*</span></label><select id="area" name="area" class="mt-1 block w-full bg-gray-50 rounded-md border-gray-300 shadow-sm"><option value="">Selecione um nível primeiro...</option></select></div>
+                        <div class="campo-item" data-campo="licenca"><label for="licenca" class="block text-sm font-medium text-gray-700 mb-1">Licença<span class="required-asterisk text-red-500 ml-1 hidden">*</span></label><select id="licenca" name="licenca" class="mt-1 block w-full bg-gray-50 rounded-md border-gray-300 shadow-sm"><option value="" disabled {% if not dados.get('licenca') %}selected{% endif %}>Selecione...</option>{% for lic in ["CC0 1.0", "CC-BY 4.0", "CC-BY-SA 4.0", "CC-BY-ND 4.0", "CC-BY-NC 4.0", "CC-BY-NC-SA 4.0", "CC-BY-NC-ND 4.0"] %}<option value="{{ lic }}" {% if dados.get('licenca') == lic %}selected{% endif %}>{{ lic }}</option>{% endfor %}</select></div>
                     </div>
                 </fieldset>
 
                 <fieldset class="border-t pt-6 campo-grupo" data-campos="nome_citacao,nome_completo,sobrenome,ano,paginas,bolsa">
                     <legend class="text-xl font-semibold text-gray-700 mb-4">3. Dados do Autor e Trabalho</legend>
                     <div class="grid md:grid-cols-2 gap-6">
-                        <div class="campo-item" data-campo="nome_citacao"><label for="nome_citacao" class="block text-sm font-medium text-gray-700 mb-1">Nome do autor para citação</label><input type="text" id="nome_citacao" name="nome_citacao" class="mt-1 block w-full bg-gray-50 rounded-md border-gray-300 shadow-sm" placeholder="ex. Silva Filho, Pedro F. da" value="{{ dados.get('nome_citacao', '') }}"></div>
-                        <div class="campo-item" data-campo="nome_completo"><label for="nome_completo" class="block text-sm font-medium text-gray-700 mb-1">Nome completo (sem último sobrenome)</label><input type="text" id="nome_completo" name="nome_completo" class="mt-1 block w-full bg-gray-50 rounded-md border-gray-300 shadow-sm" placeholder="ex. Pedro Ferreira da" value="{{ dados.get('nome_completo', '') }}"></div>
-                        <div class="campo-item" data-campo="sobrenome"><label for="sobrenome" class="block text-sm font-medium text-gray-700 mb-1">Último sobrenome</label><input type="text" id="sobrenome" name="sobrenome" class="mt-1 block w-full bg-gray-50 rounded-md border-gray-300 shadow-sm" placeholder="ex. Silva Filho" value="{{ dados.get('sobrenome', '') }}"></div>
-                        <div class="campo-item" data-campo="ano"><label for="ano" class="block text-sm font-medium text-gray-700 mb-1">Ano de publicação</label><input type="text" id="ano" name="ano" class="mt-1 block w-full bg-gray-50 rounded-md border-gray-300 shadow-sm" placeholder="ex. 2025" value="{{ dados.get('ano', '') }}"></div>
-                        <div class="campo-item" data-campo="paginas"><label for="paginas" class="block text-sm font-medium text-gray-700 mb-1">Número de páginas</label><input type="text" id="paginas" name="paginas" class="mt-1 block w-full bg-gray-50 rounded-md border-gray-300 shadow-sm" placeholder="ex. 123" value="{{ dados.get('paginas', '') }}"></div>
+                        <div class="campo-item" data-campo="nome_citacao"><label for="nome_citacao" class="block text-sm font-medium text-gray-700 mb-1">Nome do autor para citação<span class="required-asterisk text-red-500 ml-1 hidden">*</span></label><input type="text" id="nome_citacao" name="nome_citacao" class="mt-1 block w-full bg-gray-50 rounded-md border-gray-300 shadow-sm" placeholder="ex. Silva Filho, Pedro F. da" value="{{ dados.get('nome_citacao', '') }}"></div>
+                        <div class="campo-item" data-campo="nome_completo"><label for="nome_completo" class="block text-sm font-medium text-gray-700 mb-1">Nome completo (sem último sobrenome)<span class="required-asterisk text-red-500 ml-1 hidden">*</span></label><input type="text" id="nome_completo" name="nome_completo" class="mt-1 block w-full bg-gray-50 rounded-md border-gray-300 shadow-sm" placeholder="ex. Pedro Ferreira da" value="{{ dados.get('nome_completo', '') }}"></div>
+                        <div class="campo-item" data-campo="sobrenome"><label for="sobrenome" class="block text-sm font-medium text-gray-700 mb-1">Último sobrenome<span class="required-asterisk text-red-500 ml-1 hidden">*</span></label><input type="text" id="sobrenome" name="sobrenome" class="mt-1 block w-full bg-gray-50 rounded-md border-gray-300 shadow-sm" placeholder="ex. Silva Filho" value="{{ dados.get('sobrenome', '') }}"></div>
+                        <div class="campo-item" data-campo="ano"><label for="ano" class="block text-sm font-medium text-gray-700 mb-1">Ano de publicação<span class="required-asterisk text-red-500 ml-1 hidden">*</span></label><input type="text" id="ano" name="ano" class="mt-1 block w-full bg-gray-50 rounded-md border-gray-300 shadow-sm" placeholder="ex. 2025" value="{{ dados.get('ano', '') }}"></div>
+                        <div class="campo-item" data-campo="paginas"><label for="paginas" class="block text-sm font-medium text-gray-700 mb-1">Número de páginas<span class="required-asterisk text-red-500 ml-1 hidden">*</span></label><input type="text" id="paginas" name="paginas" class="mt-1 block w-full bg-gray-50 rounded-md border-gray-300 shadow-sm" placeholder="ex. 123" value="{{ dados.get('paginas', '') }}"></div>
                         <div class="campo-item" data-campo="bolsa"><label for="bolsa" class="block text-sm font-medium text-gray-700 mb-1">Agência de fomento (opcional)</label><input type="text" id="bolsa" name="bolsa" class="mt-1 block w-full bg-gray-50 rounded-md border-gray-300 shadow-sm" placeholder="ex. FAPESP 12/34567-8" value="{{ dados.get('bolsa', '') }}"></div>
                     </div>
                 </fieldset>
@@ -154,37 +120,33 @@
                 <fieldset class="border-t pt-6 campo-grupo" data-campos="titulo,subtitulo,titulo_traduzido,subtitulo_traduzido">
                     <legend class="text-xl font-semibold text-gray-700 mb-4">4. Título e Subtítulo</legend>
                     <div class="space-y-6">
-                        <div class="campo-item editor-container" data-campo="titulo"><label for="titulo" class="block text-sm font-medium text-gray-700 mb-1">Título do trabalho</label><textarea id="titulo" name="titulo" rows="3" class="editable-textarea mt-1 block w-full bg-gray-50 rounded-md border-gray-300 shadow-sm">{{ dados.get('titulo', '') }}</textarea></div>
-                        <div class="campo-item editor-container" data-campo="subtitulo"><label for="subtitulo" class="block text-sm font-medium text-gray-700 mb-1">Subtítulo (opcional)</label><textarea id="subtitulo" name="subtitulo" rows="2" class="editable-textarea mt-1 block w-full bg-gray-50 rounded-md border-gray-300 shadow-sm">{{ dados.get('subtitulo', '') }}</textarea></div>
-                        <div class="campo-item editor-container" data-campo="titulo_traduzido"><label for="titulo_traduzido" class="block text-sm font-medium text-gray-700 mb-1">Título traduzido</label><textarea id="titulo_traduzido" name="titulo_traduzido" rows="3" class="editable-textarea mt-1 block w-full bg-gray-50 rounded-md border-gray-300 shadow-sm">{{ dados.get('titulo_traduzido', '') }}</textarea></div>
-                        <div class="campo-item editor-container" data-campo="subtitulo_traduzido"><label for="subtitulo_traduzido" class="block text-sm font-medium text-gray-700 mb-1">Subtítulo traduzido (opcional)</label><textarea id="subtitulo_traduzido" name="subtitulo_traduzido" rows="2" class="editable-textarea mt-1 block w-full bg-gray-50 rounded-md border-gray-300 shadow-sm">{{ dados.get('subtitulo_traduzido', '') }}</textarea></div>
+                        <div class="campo-item editor-container" data-campo="titulo"><label for="titulo" class="block text-sm font-medium text-gray-700 mb-1">Título do trabalho<span class="required-asterisk text-red-500 ml-1 hidden">*</span></label><div id="titulo_editor" contenteditable="true" class="visual-editor" style="min-height: 84px;">{{ dados.get('titulo', '')|safe }}</div><textarea id="titulo" name="titulo" class="hidden-textarea">{{ dados.get('titulo', '') }}</textarea></div>
+                        <div class="campo-item editor-container" data-campo="subtitulo"><label for="subtitulo" class="block text-sm font-medium text-gray-700 mb-1">Subtítulo (opcional)</label><div id="subtitulo_editor" contenteditable="true" class="visual-editor" style="min-height: 64px;">{{ dados.get('subtitulo', '')|safe }}</div><textarea id="subtitulo" name="subtitulo" class="hidden-textarea">{{ dados.get('subtitulo', '') }}</textarea></div>
+                        <div class="campo-item editor-container" data-campo="titulo_traduzido"><label for="titulo_traduzido" class="block text-sm font-medium text-gray-700 mb-1">Título traduzido<span class="required-asterisk text-red-500 ml-1 hidden">*</span></label><div id="titulo_traduzido_editor" contenteditable="true" class="visual-editor" style="min-height: 84px;">{{ dados.get('titulo_traduzido', '')|safe }}</div><textarea id="titulo_traduzido" name="titulo_traduzido" class="hidden-textarea">{{ dados.get('titulo_traduzido', '') }}</textarea></div>
+                        <div class="campo-item editor-container" data-campo="subtitulo_traduzido"><label for="subtitulo_traduzido" class="block text-sm font-medium text-gray-700 mb-1">Subtítulo traduzido (opcional)</label><div id="subtitulo_traduzido_editor" contenteditable="true" class="visual-editor" style="min-height: 64px;">{{ dados.get('subtitulo_traduzido', '')|safe }}</div><textarea id="subtitulo_traduzido" name="subtitulo_traduzido" class="hidden-textarea">{{ dados.get('subtitulo_traduzido', '') }}</textarea></div>
                     </div>
                 </fieldset>
 
                 <fieldset class="border-t pt-6 campo-grupo" data-campos="orientador_completo">
                     <legend class="text-xl font-semibold text-gray-700 mb-4">5. Orientadores</legend>
                     <div class="grid md:grid-cols-2 gap-x-6 gap-y-4">
-                        <div><label for="orientador_tipo" class="block text-sm font-medium text-gray-700 mb-1">Título do orientador</label><select id="orientador_tipo" name="orientador_tipo" class="mt-1 block w-full bg-gray-50 rounded-md border-gray-300 shadow-sm"><option value="" disabled {% if not dados.get('orientador_tipo') %}selected{% endif %}>Selecione...</option><option value="Prof. Dr." {% if dados.get('orientador_tipo') == 'Prof. Dr.' %}selected{% endif %}>Prof. Dr.</option><option value="Profa. Dra." {% if dados.get('orientador_tipo') == 'Profa. Dra.' %}selected{% endif %}>Profa. Dra.</option></select></div>
-                        <div><label for="orientador" class="block text-sm font-medium text-gray-700 mb-1">Nome do orientador</label><input type="text" id="orientador" name="orientador" class="mt-1 block w-full bg-gray-50 rounded-md border-gray-300 shadow-sm" placeholder="ex. Isolda Costa" value="{{ dados.get('orientador', '') }}"></div>
+                        <div><label for="orientador_tipo" class="block text-sm font-medium text-gray-700 mb-1">Título do orientador<span class="required-asterisk text-red-500 ml-1 hidden">*</span></label><select id="orientador_tipo" name="orientador_tipo" class="mt-1 block w-full bg-gray-50 rounded-md border-gray-300 shadow-sm"><option value="" disabled {% if not dados.get('orientador_tipo') %}selected{% endif %}>Selecione...</option><option value="Prof. Dr." {% if dados.get('orientador_tipo') == 'Prof. Dr.' %}selected{% endif %}>Prof. Dr.</option><option value="Profa. Dra." {% if dados.get('orientador_tipo') == 'Profa. Dra.' %}selected{% endif %}>Profa. Dra.</option></select></div>
+                        <div><label for="orientador" class="block text-sm font-medium text-gray-700 mb-1">Nome do orientador<span class="required-asterisk text-red-500 ml-1 hidden">*</span></label><input type="text" id="orientador" name="orientador" class="mt-1 block w-full bg-gray-50 rounded-md border-gray-300 shadow-sm" placeholder="ex. Isolda Costa" value="{{ dados.get('orientador', '') }}"></div>
                         <div><label for="coorientador_tipo" class="block text-sm font-medium text-gray-700 mb-1">Título do coorientador (opcional)</label><select id="coorientador_tipo" name="coorientador_tipo" class="mt-1 block w-full bg-gray-50 rounded-md border-gray-300 shadow-sm"><option value="" disabled {% if not dados.get('coorientador_tipo') %}selected{% endif %}>Selecione...</option><option value="Prof. Dr." {% if dados.get('coorientador_tipo') == 'Prof. Dr.' %}selected{% endif %}>Prof. Dr.</option><option value="Profa. Dra." {% if dados.get('coorientador_tipo') == 'Profa. Dra.' %}selected{% endif %}>Profa. Dra.</option></select></div>
                         <div><label for="coorientador" class="block text-sm font-medium text-gray-700 mb-1">Nome do coorientador (opcional)</label><input type="text" id="coorientador" name="coorientador" class="mt-1 block w-full bg-gray-50 rounded-md border-gray-300 shadow-sm" value="{{ dados.get('coorientador', '') }}"></div>
                     </div>
                 </fieldset>
 
                 <fieldset class="border-t pt-6 campo-grupo" data-campos="chaves_keywords">
-                     <legend class="text-xl font-semibold text-gray-700 mb-4">6. Palavras-chave / Keywords</legend>
+                     <legend class="text-xl font-semibold text-gray-700 mb-4">6. Palavras-chave / Keywords<span class="required-asterisk text-red-500 ml-1 hidden">*</span></legend>
                      <div class="grid md:grid-cols-2 gap-6">
                         <div id="chaves-pt-container" class="space-y-2">
                             <h3 class="font-semibold text-gray-600">Palavras-chave (PT)</h3>
-                            {% for i in range(1, 6) %}
-                            <div class="editor-container"><textarea name="chave{{i}}" rows="1" class="editable-textarea w-full bg-gray-50 rounded-md border-gray-300 shadow-sm" placeholder="Palavra-chave {{i}}">{{ dados.get('chave' ~ i, '') }}</textarea></div>
-                            {% endfor %}
+                            {% for i in range(1, 6) %}<div class="editor-container"><div id="chave{{i}}_editor" contenteditable="true" class="visual-editor" data-placeholder="Palavra-chave {{i}}">{{ dados.get('chave' ~ i, '')|safe }}</div><textarea id="chave{{i}}" name="chave{{i}}" class="hidden-textarea">{{ dados.get('chave' ~ i, '') }}</textarea></div>{% endfor %}
                         </div>
                         <div id="chaves-en-container" class="space-y-2">
                              <h3 class="font-semibold text-gray-600">Keywords (EN)</h3>
-                             {% for i in range(1, 6) %}
-                             <div class="editor-container"><textarea name="keyword{{i}}" rows="1" class="editable-textarea w-full bg-gray-50 rounded-md border-gray-300 shadow-sm" placeholder="Keyword {{i}}">{{ dados.get('keyword' ~ i, '') }}</textarea></div>
-                             {% endfor %}
+                             {% for i in range(1, 6) %}<div class="editor-container"><div id="keyword{{i}}_editor" contenteditable="true" class="visual-editor" data-placeholder="Keyword {{i}}">{{ dados.get('keyword' ~ i, '')|safe }}</div><textarea id="keyword{{i}}" name="keyword{{i}}" class="hidden-textarea">{{ dados.get('keyword' ~ i, '') }}</textarea></div>{% endfor %}
                         </div>
                      </div>
                 </fieldset>
@@ -193,13 +155,15 @@
                     <legend class="text-xl font-semibold text-gray-700 mb-4">7. Resumos</legend>
                     <div class="space-y-6">
                         <div class="editor-container">
-                            <label for="resumo" class="block text-sm font-medium text-gray-700 mb-1">Resumo (no idioma principal)</label>
-                            <textarea id="resumo" name="resumo" rows="8" class="editable-textarea w-full bg-gray-50 rounded-md border-gray-300 shadow-sm" placeholder="Insira o resumo no idioma principal aqui...">{{ dados.get('resumo', '') }}</textarea>
+                            <label for="resumo" class="block text-sm font-medium text-gray-700 mb-1">Resumo (no idioma principal)<span class="required-asterisk text-red-500 ml-1 hidden">*</span></label>
+                            <div id="resumo_editor" contenteditable="true" class="visual-editor" style="min-height: 160px;" data-placeholder="Insira o resumo no idioma principal aqui...">{{ dados.get('resumo', '')|safe }}</div>
+                            <textarea id="resumo" name="resumo" class="hidden-textarea">{{ dados.get('resumo', '') }}</textarea>
                             <div class="text-right text-sm text-gray-500 mt-1"><span id="resumo-word-count">0</span>/500 palavras</div>
                         </div>
                         <div class="editor-container">
-                             <label for="abstract" class="block text-sm font-medium text-gray-700 mb-1">Resumo (no idioma traduzido)</label>
-                             <textarea id="abstract" name="abstract" rows="8" class="editable-textarea w-full bg-gray-50 rounded-md border-gray-300 shadow-sm" placeholder="Insira o resumo no idioma traduzido aqui...">{{ dados.get('abstract', '') }}</textarea>
+                             <label for="abstract" class="block text-sm font-medium text-gray-700 mb-1">Resumo (no idioma traduzido)<span class="required-asterisk text-red-500 ml-1 hidden">*</span></label>
+                             <div id="abstract_editor" contenteditable="true" class="visual-editor" style="min-height: 160px;" data-placeholder="Insira o resumo no idioma traduzido aqui...">{{ dados.get('abstract', '')|safe }}</div>
+                             <textarea id="abstract" name="abstract" class="hidden-textarea">{{ dados.get('abstract', '') }}</textarea>
                              <div class="text-right text-sm text-gray-500 mt-1"><span id="abstract-word-count">0</span>/500 palavras</div>
                         </div>
                     </div>
@@ -208,140 +172,124 @@
             </div>
             
             <div class="border-t pt-6 text-center">
-                <button type="submit" class="bg-blue-700 hover:bg-blue-800 text-white font-bold py-3 px-8 rounded-lg shadow-md transition-transform transform hover:scale-105">
-                    Gerar Documentos
-                </button>
+                <button type="submit" class="bg-blue-700 hover:bg-blue-800 text-white font-bold py-3 px-8 rounded-lg shadow-md transition-transform transform hover:scale-105">Gerar Documentos</button>
             </div>
         </form>
     </div>
 
     <script>
-        document.addEventListener('DOMContentLoaded', function () {
+    document.addEventListener('DOMContentLoaded', function () {
+        const CAMPOS_OBRIGATORIOS_BASE = {
+            capa: ["nivel", "area", "nome_completo", "sobrenome", "titulo", "ano", "orientador_tipo", "orientador"],
+            pagina_rosto: ["versao", "nivel", "area", "nome_completo", "sobrenome", "titulo", "ano", "orientador_tipo", "orientador"],
+            ficha: ["licenca", "idioma", "nivel", "area", "nome_citacao", "nome_completo", "sobrenome", "titulo", "ano", "paginas", "orientador_tipo", "orientador", "chaves_keywords"],
+            resumo: ["idioma", "nivel", "area", "nome_citacao", "titulo", "titulo_traduzido", "ano", "paginas", "chaves_keywords", "resumo", "abstract"],
+            abstract: ["idioma", "nivel", "area", "nome_citacao", "titulo", "titulo_traduzido", "ano", "paginas", "chaves_keywords", "resumo", "abstract"],
+            contracapa: ["nivel"],
+        };
+
+        const checkboxes = document.querySelectorAll('input[name="documentos"]');
+        const idiomaSelect = document.getElementById('idioma');
+        const nivelSelect = document.getElementById('nivel');
+        const areaSelect = document.getElementById('area');
+
+        function atualizarVisibilidade() {
+            const docsSelecionados = Array.from(checkboxes).filter(cb => cb.checked).map(cb => cb.value);
+            let camposVisiveis = new Set();
+            let camposObrigatorios = new Set();
+
+            docsSelecionados.forEach(doc => {
+                const campos = CAMPOS_POR_DOCUMENTO[doc] || [];
+                const obrigatorios = CAMPOS_OBRIGATORIOS_BASE[doc] || [];
+                campos.forEach(c => camposVisiveis.add(c));
+                obrigatorios.forEach(c => camposObrigatorios.add(c));
+            });
+
+            document.querySelectorAll('.campo-grupo').forEach(grupo => {
+                const camposDoGrupo = grupo.dataset.campos.split(',');
+                const deveMostrarGrupo = camposDoGrupo.some(c => camposVisiveis.has(c));
+                grupo.style.display = deveMostrarGrupo ? '' : 'none';
+            });
             
-            const CAMPOS_POR_DOCUMENTO = {
-                capa: ["nivel", "area", "nome_completo", "sobrenome", "titulo", "subtitulo", "ano", "orientador_completo"],
-                pagina_rosto: ["versao", "nivel", "area", "nome_completo", "sobrenome", "titulo", "subtitulo", "ano", "orientador_completo"],
-                ficha: ["licenca", "idioma", "nivel", "area", "bolsa", "nome_citacao", "nome_completo", "sobrenome", "titulo", "subtitulo", "ano", "paginas", "orientador_completo", "chaves_keywords"],
-                resumo: ["idioma", "nivel", "area", "nome_citacao", "titulo", "subtitulo", "titulo_traduzido", "subtitulo_traduzido", "ano", "paginas", "chaves_keywords", "resumos"],
-                abstract: ["idioma", "nivel", "area", "nome_citacao", "titulo", "subtitulo", "titulo_traduzido", "subtitulo_traduzido", "ano", "paginas", "chaves_keywords", "resumos"],
-                contracapa: ["nivel"],
+            document.querySelectorAll('.campo-item').forEach(item => {
+                const campo = item.dataset.campo;
+                item.style.display = camposVisiveis.has(campo) ? '' : 'none';
+            });
+            
+            document.querySelectorAll('label > .required-asterisk').forEach(asterisk => {
+                const label = asterisk.parentElement;
+                const fieldId = label.getAttribute('for');
+                const campoId = fieldId || (label.closest('.campo-item') ? label.closest('.campo-item').dataset.campo : null);
+                
+                // Mapeia IDs para os nomes de validação
+                const campoMap = { 'orientador_tipo': 'orientador_tipo', 'orientador': 'orientador' };
+                const campoName = campoMap[campoId] || campoId;
+
+                asterisk.classList.toggle('hidden', !camposObrigatorios.has(campoName));
+            });
+            
+            // Lógica especial para asterisco de 'chaves_keywords' e 'resumos'
+            document.querySelector('legend > .required-asterisk')?.classList.toggle('hidden', !camposObrigatorios.has('chaves_keywords') && !camposObrigatorios.has('resumos'));
+
+
+            const apenasFicha = docsSelecionados.length === 1 && docsSelecionados[0] === 'ficha';
+            document.getElementById('chaves-pt-container').style.display = (apenasFicha && idiomaSelect.value === 'Inglês') ? 'none' : '';
+            document.getElementById('chaves-en-container').style.display = (apenasFicha && idiomaSelect.value === 'Português') ? 'none' : '';
+        }
+
+        function atualizarAreas() {
+            const nivel = nivelSelect.value;
+            const areaAtual = "{{ dados.get('area', '') }}";
+            areaSelect.innerHTML = '<option value="" disabled>Selecione...</option>'; 
+            let areas = [];
+            if (nivel.includes("Mestrado Profissional")) areas = ["Medicina Nuclear e Radiofarmácia", "Processos de Radiação na Saúde"];
+            else if (nivel.includes("Tese") || nivel.includes("Mestrado")) areas = ["Aplicações", "Materiais", "Reatores"];
+            areas.forEach(a => {
+                const option = new Option(a, a);
+                if (a === areaAtual) option.selected = true;
+                areaSelect.add(option);
+            });
+            if (!areaSelect.value) areaSelect.selectedIndex = 0;
+        }
+
+        checkboxes.forEach(cb => cb.addEventListener('change', atualizarVisibilidade));
+        idiomaSelect.addEventListener('change', atualizarVisibilidade);
+        nivelSelect.addEventListener('change', () => { atualizarAreas(); atualizarVisibilidade(); });
+
+        ['resumo', 'abstract'].forEach(id => {
+            const editor = document.getElementById(`${id}_editor`);
+            const textarea = document.getElementById(id);
+            const countElement = document.getElementById(`${id}-word-count`);
+            const update = () => {
+                textarea.value = editor.innerHTML;
+                const text = editor.innerText.trim();
+                const wordCount = text ? (text.match(/\S+/g) || []).length : 0;
+                countElement.textContent = wordCount;
+                countElement.parentElement.classList.toggle('text-red-600', wordCount > 500);
             };
-
-            const checkboxes = document.querySelectorAll('input[name="documentos"]');
-            const idiomaSelect = document.getElementById('idioma');
-            const nivelSelect = document.getElementById('nivel');
-            const areaSelect = document.getElementById('area');
-
-            function atualizarVisibilidade() {
-                const docsSelecionados = Array.from(checkboxes).filter(cb => cb.checked).map(cb => cb.value);
-                let camposNecessarios = new Set();
-                docsSelecionados.forEach(doc => {
-                    (CAMPOS_POR_DOCUMENTO[doc] || []).forEach(campo => camposNecessarios.add(campo));
-                });
-
-                document.querySelectorAll('.campo-grupo').forEach(grupo => {
-                    const camposDoGrupo = grupo.dataset.campos.split(',');
-                    const deveMostrarGrupo = camposDoGrupo.some(c => camposNecessarios.has(c));
-                    grupo.dataset.visible = deveMostrarGrupo;
-                    grupo.style.display = deveMostrarGrupo ? '' : 'none';
-                });
-                
-                document.querySelectorAll('.campo-item').forEach(item => {
-                    const campo = item.dataset.campo;
-                    item.style.display = camposNecessarios.has(campo) ? '' : 'none';
-                });
-
-                const apenasFicha = docsSelecionados.length === 1 && docsSelecionados[0] === 'ficha';
-                document.getElementById('chaves-pt-container').style.display = (apenasFicha && idiomaSelect.value === 'Inglês') ? 'none' : '';
-                document.getElementById('chaves-en-container').style.display = (apenasFicha && idiomaSelect.value === 'Português') ? 'none' : '';
-            }
-
-            function atualizarAreas() {
-                const nivel = nivelSelect.value;
-                const areaAtual = "{{ dados.get('area', '') }}"; // Mantém a seleção anterior se houver
-                areaSelect.innerHTML = '<option value="" disabled>Selecione...</option>'; 
-
-                let areas = [];
-                if (nivel.includes("Mestrado Profissional")) {
-                    areas = ["Medicina Nuclear e Radiofarmácia", "Processos de Radiação na Saúde"];
-                } else if (nivel.includes("Tese") || nivel.includes("Mestrado")) {
-                    areas = ["Aplicações", "Materiais", "Reatores"];
-                }
-                
-                areas.forEach(a => {
-                    const option = new Option(a, a);
-                    if (a === areaAtual) option.selected = true;
-                    areaSelect.add(option);
-                });
-
-                if (!areaSelect.value) {
-                    areaSelect.selectedIndex = 0;
-                }
-            }
-
-            checkboxes.forEach(cb => cb.addEventListener('change', atualizarVisibilidade));
-            idiomaSelect.addEventListener('change', atualizarVisibilidade);
-            nivelSelect.addEventListener('change', () => {
-                atualizarAreas();
-                atualizarVisibilidade();
-            });
-
-            // --- Lógica do Contador de Palavras ---
-            ['resumo', 'abstract'].forEach(id => {
-                const textarea = document.getElementById(id);
-                const countElement = document.getElementById(`${id}-word-count`);
-                const update = () => {
-                    const text = textarea.value.trim();
-                    const wordCount = text ? (text.match(/\S+/g) || []).length : 0;
-                    countElement.textContent = wordCount;
-                    countElement.parentElement.classList.toggle('text-red-600', wordCount > 500);
-                };
-                textarea.addEventListener('input', update);
-                update(); // Contagem inicial
-            });
-            
-            // --- Lógica dos Botões de Formatação ---
-            const formattingPanel = document.getElementById('formatting-buttons-panel');
-            let activeTextarea = null;
-
-            document.getElementById('main-form').addEventListener('focusin', (e) => {
-                if (e.target.classList.contains('editable-textarea')) {
-                    activeTextarea = e.target;
-                    const container = e.target.closest('.editor-container');
-                    container.appendChild(formattingPanel);
-                    formattingPanel.style.display = 'flex';
-                }
-            });
-            
-            document.getElementById('main-form').addEventListener('focusout', (e) => {
-                 if (e.target.classList.contains('editable-textarea')) {
-                    // O evento onmousedown dos botões ocorre antes do focusout, então o botão funciona.
-                    // O painel é escondido logo após, quando o foco realmente sai.
-                    if (!e.relatedTarget || !e.relatedTarget.closest('.formatting-buttons')) {
-                       formattingPanel.style.display = 'none';
-                       activeTextarea = null;
-                    }
-                 }
-            });
-
-            // Função global para formatar texto
-            window.formatText = function(tag) {
-                if (!activeTextarea) return;
-                
-                const start = activeTextarea.selectionStart;
-                const end = activeTextarea.selectionEnd;
-                const selectedText = activeTextarea.value.substring(start, end);
-                const replacement = `<${tag}>${selectedText}</${tag}>`;
-                
-                activeTextarea.setRangeText(replacement, start, end, 'end');
-                // Não precisa devolver o foco, pois o evento onmousedown não tira o foco
-            }
-
-            // Inicialização geral
-            atualizarAreas();
-            atualizarVisibilidade();
+            editor.addEventListener('input', update);
+            update();
         });
-    </script>
 
+        const formattingPanel = document.getElementById('formatting-buttons-panel');
+        document.querySelectorAll('.visual-editor').forEach(editor => {
+            const textarea = editor.nextElementSibling;
+            editor.addEventListener('input', () => { textarea.value = editor.innerHTML; });
+            editor.addEventListener('focus', () => {
+                const container = editor.closest('.editor-container');
+                container.appendChild(formattingPanel);
+                formattingPanel.style.display = 'flex';
+            });
+            editor.addEventListener('blur', (e) => {
+                if (!e.relatedTarget || !e.relatedTarget.closest('.formatting-buttons')) {
+                    formattingPanel.style.display = 'none';
+                }
+            });
+        });
+        
+        atualizarAreas();
+        atualizarVisibilidade();
+    });
+    </script>
 </body>
 </html>
