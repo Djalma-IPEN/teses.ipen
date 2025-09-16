@@ -20,11 +20,11 @@ app.secret_key = 'sua-chave-secreta-muito-segura'
 
 # --- Dicionário de Campos Necessários (para validação) ---
 CAMPOS_POR_DOCUMENTO = {
-    "capa": ["nivel", "area", "nome_completo", "sobrenome", "titulo", "ano", "orientador_completo"],
-    "pagina_rosto": ["versao", "nivel", "area", "nome_completo", "sobrenome", "titulo", "ano", "orientador_completo"],
-    "ficha": ["licenca", "idioma", "nivel", "area", "nome_citacao", "nome_completo", "sobrenome", "titulo", "ano", "paginas", "orientador_completo", "chaves_keywords"],
-    "resumo": ["idioma", "nivel", "area", "nome_citacao", "titulo", "titulo_traduzido", "ano", "paginas", "chaves_keywords", "resumos"],
-    "abstract": ["idioma", "nivel", "area", "nome_citacao", "titulo", "titulo_traduzido", "ano", "paginas", "chaves_keywords", "resumos"],
+    "capa": ["nivel", "area", "nome_completo", "sobrenome", "titulo", "ano", "orientador_tipo", "orientador"],
+    "pagina_rosto": ["versao", "nivel", "area", "nome_completo", "sobrenome", "titulo", "ano", "orientador_tipo", "orientador"],
+    "ficha": ["licenca", "idioma", "nivel", "area", "nome_citacao", "nome_completo", "sobrenome", "titulo", "ano", "paginas", "orientador_tipo", "orientador", "chaves_keywords"],
+    "resumo": ["idioma", "nivel", "area", "nome_citacao", "titulo", "titulo_traduzido", "ano", "paginas", "chaves_keywords", "resumo", "abstract"],
+    "abstract": ["idioma", "nivel", "area", "nome_citacao", "titulo", "titulo_traduzido", "ano", "paginas", "chaves_keywords", "resumo", "abstract"],
     "contracapa": ["nivel"],
 }
 
@@ -141,7 +141,7 @@ def gerar_capa(dados, buffer):
     titulo_completo = dados.get('titulo','') + (f": {dados.get('subtitulo','')}" if dados.get('subtitulo') else ""); p_titulo = Paragraph(titulo_completo, s_titulo)
     w, h = p_titulo.wrapOn(c, width-4*cm, y); p_titulo.drawOn(c, 2*cm, y-h); y -= h + 2*cm
     
-    autor = f"{dados.get('nome_completo','')} {dados.get('sobrenome','')} ridiculously long".upper(); p_autor = Paragraph(autor, s_autor)
+    autor = f"{dados.get('nome_completo','')} {dados.get('sobrenome','')}".upper(); p_autor = Paragraph(autor, s_autor)
     w, h = p_autor.wrapOn(c, width-4*cm, y); p_autor.drawOn(c, 2*cm, y-h); y -= h + 4.5*cm
     
     if "Mestrado Profissional" in nivel: t_final = f"Dissertação apresentada como parte dos requisitos para obtenção do Grau de Mestre Profissional em Tecnologia das Radiações em Ciências da Saúde na Área de {dados.get('area','')}"
@@ -183,7 +183,7 @@ def gerar_pagina_rosto(dados, buffer):
     p_versao = Paragraph(versao_texto, style_versao)
     w, h = p_versao.wrapOn(c, width-4*cm, y); p_versao.drawOn(c, 2*cm, y - h); y -= h + 2*cm
     
-    autor = f"{dados.get('nome_completo','')} {dados.get('sobrenome','')} ridiculously long".upper()
+    autor = f"{dados.get('nome_completo','')} {dados.get('sobrenome','')}".upper()
     p_autor = Paragraph(autor, style_normal_center)
     w, h = p_autor.wrapOn(c, width-4*cm, y); p_autor.drawOn(c, 2*cm, y - h); y -= h + 4.5*cm
     
@@ -319,12 +319,12 @@ def formulario():
                 flash(f"Erro: O campo '{nome}' é obrigatório para os documentos selecionados.", 'error')
                 return render_template('formulario.html', dados=dados)
         
-        if 'orientador_completo' in campos_necessarios_geral:
+        if 'orientador_tipo' in campos_necessarios_geral or 'orientador' in campos_necessarios_geral:
             if not dados.get('orientador_tipo') or not dados.get('orientador'):
                 flash("Erro: Os campos 'Título do Orientador' e 'Nome do Orientador' são obrigatórios.", 'error')
                 return render_template('formulario.html', dados=dados)
         
-        if 'resumos' in campos_necessarios_geral:
+        if 'resumo' in campos_necessarios_geral or 'abstract' in campos_necessarios_geral:
              if not dados.get('resumo') or not dados.get('abstract'):
                 flash("Erro: Os campos 'Resumo' e 'Abstract' são obrigatórios.", 'error')
                 return render_template('formulario.html', dados=dados)

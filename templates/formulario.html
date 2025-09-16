@@ -179,12 +179,20 @@
 
     <script>
     document.addEventListener('DOMContentLoaded', function () {
+        const CAMPOS_POR_DOCUMENTO_FRONTEND = {
+            "capa": ["nivel", "area", "nome_completo", "sobrenome", "titulo", "subtitulo", "ano", "orientador_completo"],
+            "pagina_rosto": ["versao", "nivel", "area", "nome_completo", "sobrenome", "titulo", "subtitulo", "ano", "orientador_completo"],
+            "ficha": ["licenca", "idioma", "nivel", "area", "bolsa", "nome_citacao", "nome_completo", "sobrenome", "titulo", "subtitulo", "ano", "paginas", "orientador_completo", "chaves_keywords"],
+            "resumo": ["idioma", "nivel", "area", "nome_citacao", "titulo", "subtitulo", "titulo_traduzido", "subtitulo_traduzido", "ano", "paginas", "chaves_keywords", "resumos"],
+            "abstract": ["idioma", "nivel", "area", "nome_citacao", "titulo", "subtitulo", "titulo_traduzido", "subtitulo_traduzido", "ano", "paginas", "chaves_keywords", "resumos"],
+            "contracapa": ["nivel"],
+        };
         const CAMPOS_OBRIGATORIOS_BASE = {
             capa: ["nivel", "area", "nome_completo", "sobrenome", "titulo", "ano", "orientador_tipo", "orientador"],
             pagina_rosto: ["versao", "nivel", "area", "nome_completo", "sobrenome", "titulo", "ano", "orientador_tipo", "orientador"],
             ficha: ["licenca", "idioma", "nivel", "area", "nome_citacao", "nome_completo", "sobrenome", "titulo", "ano", "paginas", "orientador_tipo", "orientador", "chaves_keywords"],
-            resumo: ["idioma", "nivel", "area", "nome_citacao", "titulo", "titulo_traduzido", "ano", "paginas", "chaves_keywords", "resumo", "abstract"],
-            abstract: ["idioma", "nivel", "area", "nome_citacao", "titulo", "titulo_traduzido", "ano", "paginas", "chaves_keywords", "resumo", "abstract"],
+            resumo: ["idioma", "nivel", "area", "nome_citacao", "titulo", "titulo_traduzido", "ano", "paginas", "chaves_keywords", "resumos"],
+            abstract: ["idioma", "nivel", "area", "nome_citacao", "titulo", "titulo_traduzido", "ano", "paginas", "chaves_keywords", "resumos"],
             contracapa: ["nivel"],
         };
 
@@ -192,14 +200,24 @@
         const idiomaSelect = document.getElementById('idioma');
         const nivelSelect = document.getElementById('nivel');
         const areaSelect = document.getElementById('area');
-
+        
+        // Mapeia os IDs dos campos com os nomes usados na lógica
+        const campoMap = { 'orientador_tipo': 'orientador_tipo', 'orientador': 'orientador', 'coorientador_tipo': 'coorientador_tipo', 'coorientador': 'coorientador' };
+        
+        // Define as dependências de grupo para a visibilidade
+        const grupoCamposVisibilidade = {
+            'orientador_completo': ['orientador_tipo', 'orientador', 'coorientador_tipo', 'coorientador'],
+            'resumos': ['resumo', 'abstract'],
+            'chaves_keywords': Array.from({length: 5}, (_, i) => `chave${i+1}`).concat(Array.from({length: 5}, (_, i) => `keyword${i+1}`))
+        };
+        
         function atualizarVisibilidade() {
             const docsSelecionados = Array.from(checkboxes).filter(cb => cb.checked).map(cb => cb.value);
             let camposVisiveis = new Set();
             let camposObrigatorios = new Set();
 
             docsSelecionados.forEach(doc => {
-                const campos = CAMPOS_POR_DOCUMENTO[doc] || [];
+                const campos = CAMPOS_POR_DOCUMENTO_FRONTEND[doc] || [];
                 const obrigatorios = CAMPOS_OBRIGATORIOS_BASE[doc] || [];
                 campos.forEach(c => camposVisiveis.add(c));
                 obrigatorios.forEach(c => camposObrigatorios.add(c));
@@ -207,29 +225,51 @@
 
             document.querySelectorAll('.campo-grupo').forEach(grupo => {
                 const camposDoGrupo = grupo.dataset.campos.split(',');
-                const deveMostrarGrupo = camposDoGrupo.some(c => camposVisiveis.has(c));
+                let deveMostrarGrupo = false;
+                for (let campo of camposDoGrupo) {
+                    if (camposVisiveis.has(campo)) {
+                        deveMostrarGrupo = true;
+                        break;
+                    }
+                    if (grupoCamposVisibilidade[campo]) {
+                        if (grupoCamposVisibilidade[campo].some(c => camposVisiveis.has(c))) {
+                            deveMostrarGrupo = true;
+                            break;
+                        }
+                    }
+                }
                 grupo.style.display = deveMostrarGrupo ? '' : 'none';
             });
             
             document.querySelectorAll('.campo-item').forEach(item => {
                 const campo = item.dataset.campo;
-                item.style.display = camposVisiveis.has(campo) ? '' : 'none';
+                if (grupoCamposVisibilidade[campo]) {
+                    item.style.display = grupoCamposVisibilidade[campo].some(c => camposVisiveis.has(c)) ? '' : 'none';
+                } else {
+                    item.style.display = camposVisiveis.has(campo) ? '' : 'none';
+                }
             });
             
+            // Lógica para os asteriscos de campos obrigatórios
             document.querySelectorAll('label > .required-asterisk').forEach(asterisk => {
                 const label = asterisk.parentElement;
                 const fieldId = label.getAttribute('for');
-                const campoId = fieldId || (label.closest('.campo-item') ? label.closest('.campo-item').dataset.campo : null);
-                
-                // Mapeia IDs para os nomes de validação
-                const campoMap = { 'orientador_tipo': 'orientador_tipo', 'orientador': 'orientador' };
-                const campoName = campoMap[campoId] || campoId;
-
+                const campoName = campoMap[fieldId] || fieldId;
                 asterisk.classList.toggle('hidden', !camposObrigatorios.has(campoName));
             });
             
-            // Lógica especial para asterisco de 'chaves_keywords' e 'resumos'
-            document.querySelector('legend > .required-asterisk')?.classList.toggle('hidden', !camposObrigatorios.has('chaves_keywords') && !camposObrigatorios.has('resumos'));
+            // Lógica para asterisco de 'chaves_keywords' e 'resumos'
+            const legendChaves = document.querySelector('fieldset[data-campos="chaves_keywords"] > legend > .required-asterisk');
+            if (legendChaves) {
+                const isChavesObrigatorio = camposObrigatorios.has('chaves_keywords');
+                const isResumosObrigatorio = camposObrigatorios.has('resumos');
+                legendChaves.classList.toggle('hidden', !isChavesObrigatorio);
+            }
+            const legendResumos = document.querySelector('fieldset[data-campos="resumos"] > legend > .required-asterisk');
+            if (legendResumos) {
+                 const isResumosObrigatorio = camposObrigatorios.has('resumos');
+                 legendResumos.classList.toggle('hidden', !isResumosObrigatorio);
+            }
 
 
             const apenasFicha = docsSelecionados.length === 1 && docsSelecionados[0] === 'ficha';
@@ -249,13 +289,19 @@
                 if (a === areaAtual) option.selected = true;
                 areaSelect.add(option);
             });
-            if (!areaSelect.value) areaSelect.selectedIndex = 0;
+            if (areaSelect.options.length > 0 && !areaSelect.value) {
+                areaSelect.selectedIndex = 0;
+            }
+        }
+        
+        function getWordCount(text) {
+            return text ? (text.match(/\S+/g) || []).length : 0;
         }
 
         checkboxes.forEach(cb => cb.addEventListener('change', atualizarVisibilidade));
         idiomaSelect.addEventListener('change', atualizarVisibilidade);
         nivelSelect.addEventListener('change', () => { atualizarAreas(); atualizarVisibilidade(); });
-
+        
         ['resumo', 'abstract'].forEach(id => {
             const editor = document.getElementById(`${id}_editor`);
             const textarea = document.getElementById(id);
@@ -263,7 +309,7 @@
             const update = () => {
                 textarea.value = editor.innerHTML;
                 const text = editor.innerText.trim();
-                const wordCount = text ? (text.match(/\S+/g) || []).length : 0;
+                const wordCount = getWordCount(text);
                 countElement.textContent = wordCount;
                 countElement.parentElement.classList.toggle('text-red-600', wordCount > 500);
             };
