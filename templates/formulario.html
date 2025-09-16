@@ -320,7 +320,12 @@
         const formattingPanel = document.getElementById('formatting-buttons-panel');
         document.querySelectorAll('.visual-editor').forEach(editor => {
             const textarea = editor.nextElementSibling;
-            editor.addEventListener('input', () => { textarea.value = editor.innerHTML; });
+            
+            // Sincroniza o conteúdo dinamicamente em cada input
+            editor.addEventListener('input', () => {
+                textarea.value = editor.innerHTML;
+            });
+
             editor.addEventListener('focus', () => {
                 const container = editor.closest('.editor-container');
                 container.appendChild(formattingPanel);
@@ -330,15 +335,6 @@
                 if (!e.relatedTarget || !e.relatedTarget.closest('.formatting-buttons')) {
                     formattingPanel.style.display = 'none';
                 }
-            });
-        });
-
-        // Corrigindo a sincronização no envio do formulário
-        const form = document.getElementById('main-form');
-        form.addEventListener('submit', function() {
-            document.querySelectorAll('.visual-editor').forEach(editor => {
-                const textarea = editor.nextElementSibling;
-                textarea.value = editor.innerHTML;
             });
         });
         
