@@ -320,15 +320,14 @@
             });
         });
 
-        // Corrigindo a sincronização no envio do formulário
+        // Corrigindo o envio do formulário de forma robusta
         const form = document.getElementById('main-form');
         form.addEventListener('submit', function(event) {
             event.preventDefault(); // Previne o envio padrão do formulário
             
             const formData = new FormData(form);
-            const data = {};
 
-            // Mapeia os campos de texto editáveis para o FormData
+            // Adiciona o conteúdo dos campos editáveis ao FormData
             document.querySelectorAll('.visual-editor').forEach(editor => {
                 const name = editor.getAttribute('name');
                 if (name) {
@@ -361,13 +360,8 @@
                             location.reload(); // Recarrega a página após o download
                         });
                     } else {
-                        // Se a resposta não for um arquivo, deve ser um erro com a mensagem flash
                         return response.text().then(text => {
                             document.body.innerHTML = text;
-                            // Re-executa os scripts do formulário para o novo DOM
-                            document.querySelectorAll('script').forEach(script => {
-                                eval(script.innerText);
-                            });
                         });
                     }
                 } else {
