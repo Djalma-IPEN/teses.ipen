@@ -48,9 +48,6 @@
         }
         .visual-editor sup { vertical-align: super; font-size: smaller; }
         .visual-editor sub { vertical-align: sub; font-size: smaller; }
-
-        /* Esconde o textarea real */
-        .hidden-textarea { display: none; }
     </style>
 </head>
 <body class="bg-gray-100 font-sans">
@@ -120,10 +117,10 @@
                 <fieldset class="border-t pt-6 campo-grupo" data-campos="titulo,subtitulo,titulo_traduzido,subtitulo_traduzido">
                     <legend class="text-xl font-semibold text-gray-700 mb-4">4. Título e Subtítulo</legend>
                     <div class="space-y-6">
-                        <div class="campo-item editor-container" data-campo="titulo"><label for="titulo" class="block text-sm font-medium text-gray-700 mb-1">Título do trabalho<span class="required-asterisk text-red-500 ml-1 hidden">*</span></label><div id="titulo_editor" contenteditable="true" class="visual-editor" style="min-height: 84px;">{{ dados.get('titulo', '')|safe }}</div><textarea id="titulo" name="titulo" class="hidden-textarea">{{ dados.get('titulo', '') }}</textarea></div>
-                        <div class="campo-item editor-container" data-campo="subtitulo"><label for="subtitulo" class="block text-sm font-medium text-gray-700 mb-1">Subtítulo (opcional)</label><div id="subtitulo_editor" contenteditable="true" class="visual-editor" style="min-height: 64px;">{{ dados.get('subtitulo', '')|safe }}</div><textarea id="subtitulo" name="subtitulo" class="hidden-textarea">{{ dados.get('subtitulo', '') }}</textarea></div>
-                        <div class="campo-item editor-container" data-campo="titulo_traduzido"><label for="titulo_traduzido" class="block text-sm font-medium text-gray-700 mb-1">Título traduzido<span class="required-asterisk text-red-500 ml-1 hidden">*</span></label><div id="titulo_traduzido_editor" contenteditable="true" class="visual-editor" style="min-height: 84px;">{{ dados.get('titulo_traduzido', '')|safe }}</div><textarea id="titulo_traduzido" name="titulo_traduzido" class="hidden-textarea">{{ dados.get('titulo_traduzido', '') }}</textarea></div>
-                        <div class="campo-item editor-container" data-campo="subtitulo_traduzido"><label for="subtitulo_traduzido" class="block text-sm font-medium text-gray-700 mb-1">Subtítulo traduzido (opcional)</label><div id="subtitulo_traduzido_editor" contenteditable="true" class="visual-editor" style="min-height: 64px;">{{ dados.get('subtitulo_traduzido', '')|safe }}</div><textarea id="subtitulo_traduzido" name="subtitulo_traduzido" class="hidden-textarea">{{ dados.get('subtitulo_traduzido', '') }}</textarea></div>
+                        <div class="campo-item editor-container" data-campo="titulo"><label for="titulo" class="block text-sm font-medium text-gray-700 mb-1">Título do trabalho<span class="required-asterisk text-red-500 ml-1 hidden">*</span></label><div id="titulo_editor" contenteditable="true" name="titulo" class="visual-editor" style="min-height: 84px;">{{ dados.get('titulo', '')|safe }}</div></div>
+                        <div class="campo-item editor-container" data-campo="subtitulo"><label for="subtitulo" class="block text-sm font-medium text-gray-700 mb-1">Subtítulo (opcional)</label><div id="subtitulo_editor" contenteditable="true" name="subtitulo" class="visual-editor" style="min-height: 64px;">{{ dados.get('subtitulo', '')|safe }}</div></div>
+                        <div class="campo-item editor-container" data-campo="titulo_traduzido"><label for="titulo_traduzido" class="block text-sm font-medium text-gray-700 mb-1">Título traduzido<span class="required-asterisk text-red-500 ml-1 hidden">*</span></label><div id="titulo_traduzido_editor" contenteditable="true" name="titulo_traduzido" class="visual-editor" style="min-height: 84px;">{{ dados.get('titulo_traduzido', '')|safe }}</div></div>
+                        <div class="campo-item editor-container" data-campo="subtitulo_traduzido"><label for="subtitulo_traduzido" class="block text-sm font-medium text-gray-700 mb-1">Subtítulo traduzido (opcional)</label><div id="subtitulo_traduzido_editor" contenteditable="true" name="subtitulo_traduzido" class="visual-editor" style="min-height: 64px;">{{ dados.get('subtitulo_traduzido', '')|safe }}</div></div>
                     </div>
                 </fieldset>
 
@@ -142,11 +139,11 @@
                      <div class="grid md:grid-cols-2 gap-6">
                         <div id="chaves-pt-container" class="space-y-2">
                             <h3 class="font-semibold text-gray-600">Palavras-chave (PT)</h3>
-                            {% for i in range(1, 6) %}<div class="editor-container"><div id="chave{{i}}_editor" contenteditable="true" class="visual-editor" data-placeholder="Palavra-chave {{i}}">{{ dados.get('chave' ~ i, '')|safe }}</div><textarea id="chave{{i}}" name="chave{{i}}" class="hidden-textarea">{{ dados.get('chave' ~ i, '') }}</textarea></div>{% endfor %}
+                            {% for i in range(1, 6) %}<div class="editor-container"><div id="chave{{i}}_editor" contenteditable="true" name="chave{{i}}" class="visual-editor" data-placeholder="Palavra-chave {{i}}">{{ dados.get('chave' ~ i, '')|safe }}</div></div>{% endfor %}
                         </div>
                         <div id="chaves-en-container" class="space-y-2">
                              <h3 class="font-semibold text-gray-600">Keywords (EN)</h3>
-                             {% for i in range(1, 6) %}<div class="editor-container"><div id="keyword{{i}}_editor" contenteditable="true" class="visual-editor" data-placeholder="Keyword {{i}}">{{ dados.get('keyword' ~ i, '')|safe }}</div><textarea id="keyword{{i}}" name="keyword{{i}}" class="hidden-textarea">{{ dados.get('keyword' ~ i, '') }}</textarea></div>{% endfor %}
+                             {% for i in range(1, 6) %}<div class="editor-container"><div id="keyword{{i}}_editor" contenteditable="true" name="keyword{{i}}" class="visual-editor" data-placeholder="Keyword {{i}}">{{ dados.get('keyword' ~ i, '')|safe }}</div></div>{% endfor %}
                         </div>
                      </div>
                 </fieldset>
@@ -156,14 +153,12 @@
                     <div class="space-y-6">
                         <div class="editor-container">
                             <label for="resumo" class="block text-sm font-medium text-gray-700 mb-1">Resumo (no idioma principal)<span class="required-asterisk text-red-500 ml-1 hidden">*</span></label>
-                            <div id="resumo_editor" contenteditable="true" class="visual-editor" style="min-height: 160px;" data-placeholder="Insira o resumo no idioma principal aqui...">{{ dados.get('resumo', '')|safe }}</div>
-                            <textarea id="resumo" name="resumo" class="hidden-textarea">{{ dados.get('resumo', '') }}</textarea>
+                            <div id="resumo_editor" contenteditable="true" name="resumo" class="visual-editor" style="min-height: 160px;" data-placeholder="Insira o resumo no idioma principal aqui...">{{ dados.get('resumo', '')|safe }}</div>
                             <div class="text-right text-sm text-gray-500 mt-1"><span id="resumo-word-count">0</span>/500 palavras</div>
                         </div>
                         <div class="editor-container">
                              <label for="abstract" class="block text-sm font-medium text-gray-700 mb-1">Resumo (no idioma traduzido)<span class="required-asterisk text-red-500 ml-1 hidden">*</span></label>
-                             <div id="abstract_editor" contenteditable="true" class="visual-editor" style="min-height: 160px;" data-placeholder="Insira o resumo no idioma traduzido aqui...">{{ dados.get('abstract', '')|safe }}</div>
-                             <textarea id="abstract" name="abstract" class="hidden-textarea">{{ dados.get('abstract', '') }}</textarea>
+                             <div id="abstract_editor" contenteditable="true" name="abstract" class="visual-editor" style="min-height: 160px;" data-placeholder="Insira o resumo no idioma traduzido aqui...">{{ dados.get('abstract', '')|safe }}</div>
                              <div class="text-right text-sm text-gray-500 mt-1"><span id="abstract-word-count">0</span>/500 palavras</div>
                         </div>
                     </div>
@@ -201,10 +196,8 @@
         const nivelSelect = document.getElementById('nivel');
         const areaSelect = document.getElementById('area');
         
-        // Mapeia os IDs dos campos com os nomes usados na lógica
         const campoMap = { 'orientador_tipo': 'orientador_tipo', 'orientador': 'orientador', 'coorientador_tipo': 'coorientador_tipo', 'coorientador': 'coorientador' };
         
-        // Define as dependências de grupo para a visibilidade
         const grupoCamposVisibilidade = {
             'orientador_completo': ['orientador_tipo', 'orientador', 'coorientador_tipo', 'coorientador'],
             'resumos': ['resumo', 'abstract'],
@@ -250,7 +243,6 @@
                 }
             });
             
-            // Lógica para os asteriscos de campos obrigatórios
             document.querySelectorAll('label > .required-asterisk').forEach(asterisk => {
                 const label = asterisk.parentElement;
                 const fieldId = label.getAttribute('for');
@@ -258,7 +250,6 @@
                 asterisk.classList.toggle('hidden', !camposObrigatorios.has(campoName));
             });
             
-            // Lógica para asterisco de 'chaves_keywords' e 'resumos'
             const legendChaves = document.querySelector('fieldset[data-campos="chaves_keywords"] > legend > .required-asterisk');
             if (legendChaves) {
                 const isChavesObrigatorio = camposObrigatorios.has('chaves_keywords');
@@ -304,10 +295,8 @@
         
         ['resumo', 'abstract'].forEach(id => {
             const editor = document.getElementById(`${id}_editor`);
-            const textarea = document.getElementById(id);
             const countElement = document.getElementById(`${id}-word-count`);
             const update = () => {
-                textarea.value = editor.innerHTML;
                 const text = editor.innerText.trim();
                 const wordCount = getWordCount(text);
                 countElement.textContent = wordCount;
@@ -319,13 +308,6 @@
 
         const formattingPanel = document.getElementById('formatting-buttons-panel');
         document.querySelectorAll('.visual-editor').forEach(editor => {
-            const textarea = editor.nextElementSibling;
-            
-            // Sincroniza o conteúdo dinamicamente em cada input
-            editor.addEventListener('input', () => {
-                textarea.value = editor.innerHTML;
-            });
-
             editor.addEventListener('focus', () => {
                 const container = editor.closest('.editor-container');
                 container.appendChild(formattingPanel);
@@ -335,6 +317,68 @@
                 if (!e.relatedTarget || !e.relatedTarget.closest('.formatting-buttons')) {
                     formattingPanel.style.display = 'none';
                 }
+            });
+        });
+
+        // Corrigindo a sincronização no envio do formulário
+        const form = document.getElementById('main-form');
+        form.addEventListener('submit', function(event) {
+            event.preventDefault(); // Previne o envio padrão do formulário
+            
+            const formData = new FormData(form);
+            const data = {};
+
+            // Mapeia os campos de texto editáveis para o FormData
+            document.querySelectorAll('.visual-editor').forEach(editor => {
+                const name = editor.getAttribute('name');
+                if (name) {
+                    formData.append(name, editor.innerHTML);
+                }
+            });
+
+            // Envia os dados manualmente via fetch API
+            fetch(form.action, {
+                method: form.method,
+                body: new URLSearchParams(formData).toString(),
+                headers: {
+                    'Content-Type': 'application/x-www-form-urlencoded'
+                }
+            })
+            .then(response => {
+                if (response.ok) {
+                    const contentDisposition = response.headers.get('Content-Disposition');
+                    if (contentDisposition && contentDisposition.includes('attachment')) {
+                        const filename = contentDisposition.split('filename=')[1].replace(/['"]/g, '');
+                        return response.blob().then(blob => {
+                            const url = window.URL.createObjectURL(blob);
+                            const a = document.createElement('a');
+                            a.href = url;
+                            a.download = filename;
+                            document.body.appendChild(a);
+                            a.click();
+                            a.remove();
+                            window.URL.revokeObjectURL(url);
+                            location.reload(); // Recarrega a página após o download
+                        });
+                    } else {
+                        // Se a resposta não for um arquivo, deve ser um erro com a mensagem flash
+                        return response.text().then(text => {
+                            document.body.innerHTML = text;
+                            // Re-executa os scripts do formulário para o novo DOM
+                            document.querySelectorAll('script').forEach(script => {
+                                eval(script.innerText);
+                            });
+                        });
+                    }
+                } else {
+                    return response.text().then(text => {
+                         document.body.innerHTML = text;
+                    });
+                }
+            })
+            .catch(error => {
+                console.error('Erro no envio do formulário:', error);
+                alert('Ocorreu um erro ao enviar o formulário. Por favor, tente novamente.');
             });
         });
         
