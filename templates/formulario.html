@@ -332,6 +332,15 @@
                 }
             });
         });
+
+        // Corrigindo a sincronização no envio do formulário
+        const form = document.getElementById('main-form');
+        form.addEventListener('submit', function() {
+            document.querySelectorAll('.visual-editor').forEach(editor => {
+                const textarea = editor.nextElementSibling;
+                textarea.value = editor.innerHTML;
+            });
+        });
         
         atualizarAreas();
         atualizarVisibilidade();
