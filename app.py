@@ -57,6 +57,10 @@ def clean_html_for_reportlab(html_string):
     for tag in soup.find_all(['p', 'div']):
         tag.replace_with(NavigableString(tag.decode_contents() + ' '))
 
+    # Adicionando a verificação para garantir que soup.div não seja None
+    if soup.div is None:
+        return ""
+        
     # Converte o soup de volta para uma string e remove quebras de linha HTML
     cleaned_html = str(soup.div.decode_contents()).replace('\n', ' ').replace('\r', ' ').strip()
     
