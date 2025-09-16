@@ -329,7 +329,7 @@
             document.querySelectorAll('.visual-editor').forEach(editor => {
                 const name = editor.getAttribute('name');
                 if (name) {
-                    const value = editor.innerText.trim();
+                    const value = editor.innerHTML;
                     formData.append(name, value);
                 }
             });
