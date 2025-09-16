@@ -367,6 +367,6 @@ def formulario():
             return render_template('formulario.html', dados=request.form.to_dict())
 
     return render_template('formulario.html', dados={})
-
+    
 if __name__ == '__main__':
     app.run(debug=True)
