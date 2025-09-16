@@ -322,14 +322,15 @@
 
         const form = document.getElementById('main-form');
         form.addEventListener('submit', function(event) {
-            event.preventDefault(); // Previne o envio padrão do formulário
+            event.preventDefault(); 
             
             const formData = new FormData(form);
 
             document.querySelectorAll('.visual-editor').forEach(editor => {
                 const name = editor.getAttribute('name');
                 if (name) {
-                    formData.append(name, editor.innerHTML);
+                    const value = editor.innerText.trim();
+                    formData.append(name, value);
                 }
             });
 
