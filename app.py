@@ -3,6 +3,7 @@ import io
 import zipfile
 from flask import Flask, render_template, request, send_file, flash
 from bs4 import BeautifulSoup, NavigableString
+import re
 
 # --- Imports do ReportLab ---
 from reportlab.lib.pagesizes import A4
@@ -32,35 +33,42 @@ CAMPOS_POR_DOCUMENTO = {
 
 def clean_html_for_reportlab(html_string):
     """
-    Limpa o HTML, removendo atributos e tags não suportados pelo ReportLab
-    e tratando quebras de linha indesejadas de divs e ps.
+    Limpa o HTML, removendo atributos e tags não suportados pelo ReportLab,
+    tratando quebras de linha e padronizando o espaçamento.
     """
     if not html_string or not isinstance(html_string, str):
         return ""
     
-    # Adiciona um nó raiz para garantir que o BeautifulSoup processe fragmentos
     soup = BeautifulSoup(f"<div>{html_string}</div>", 'html.parser')
     
-    # Remove atributos inválidos e tags que não preservam conteúdo
     for tag in soup.find_all(True):
         allowed_attrs = []
         if tag.name == 'font':
             allowed_attrs = ['color', 'face', 'size']
         elif tag.name == 'a':
             allowed_attrs = ['href']
-            
+        
         attrs = dict(tag.attrs)
         for attr in attrs:
             if attr.lower() not in allowed_attrs:
                 del tag[attr]
 
-    # Substitui tags <p> e <div> por seu conteúdo seguido de um espaço.
+    # Substitui tags <p> e <div> por seu conteúdo.
     for tag in soup.find_all(['p', 'div']):
         tag.replace_with(NavigableString(tag.decode_contents() + ' '))
 
-    cleaned_html = soup.decode_contents().strip()
-    return cleaned_html.replace('<br>', '<br/>').replace('\n', ' ').replace('\r', ' ').strip()
-
+    # Converte o soup de volta para uma string e remove quebras de linha HTML
+    cleaned_html = str(soup.div.decode_contents()).replace('\n', ' ').replace('\r', ' ').strip()
+    
+    # Remove espaços extras antes e depois de tags e substitui múltiplos espaços por um único
+    cleaned_html = re.sub(r'\s*<br\s*/>\s*', '<br/>', cleaned_html)
+    cleaned_html = re.sub(r'(\s+)', ' ', cleaned_html)
+    
+    # Substitui tags <i> e <b> com a formatação correta do ReportLab
+    cleaned_html = cleaned_html.replace("<i>", "<i>").replace("</i>", "</i>")
+    cleaned_html = cleaned_html.replace("<b>", "<b>").replace("</b>", "</b>")
+    
+    return cleaned_html
 
 def static_file_path(filename):
     """ Retorna o caminho absoluto para um arquivo na pasta static. """
@@ -188,7 +196,7 @@ def gerar_pagina_rosto(dados, buffer):
     w, h = p_autor.wrapOn(c, width-4*cm, y); p_autor.drawOn(c, 2*cm, y - h); y -= h + 4.5*cm
     
     style_justificado = ParagraphStyle(name='Justify', parent=styles['Normal'], fontName='Helvetica', fontSize=12, leading=14, alignment=TA_JUSTIFY)
-    style_orientador = ParagraphStyle(name='LeftOrientador', parent=styles['Normal'], fontName='Helvetica', fontSize=12, leading=14, alignment=TA_LEFT)
+    s_orient = ParagraphStyle(name='LeftOrientador', parent=styles['Normal'], fontName='Helvetica', fontSize=12, leading=14, alignment=TA_LEFT)
     
     if "Mestrado Profissional" in nivel: texto_final = f"Dissertação apresentada como parte dos requisitos para obtenção do Grau de Mestre Profissional em Tecnologia das Radiações em Ciências da Saúde na Área de {dados.get('area','')}"
     elif "Mestrado" in nivel: texto_final = f"Dissertação apresentada como parte dos requisitos para obtenção do Grau de Mestre em Ciências na Área de Tecnologia Nuclear - {dados.get('area','')}"
@@ -198,12 +206,12 @@ def gerar_pagina_rosto(dados, buffer):
     w, h = p_texto_final.wrapOn(c, width/2 - 2*cm, y); p_texto_final.drawOn(c, width/2, y - h); y -= h + 0.8*cm
     
     if dados.get("orientador"):
-        p_label = Paragraph("Orientadora:" if "Profa" in dados.get("orientador_tipo") else "Orientador:", style_orientador); w, h = p_label.wrapOn(c, width/2-2*cm, y); p_label.drawOn(c, width/2, y-h); y -= h + 0.1*cm
-        p_nome = Paragraph(f"{dados.get('orientador_tipo')} {dados.get('orientador')}", style_orientador); w, h = p_nome.wrapOn(c, width/2-2*cm, y); p_nome.drawOn(c, width/2, y-h); y -= h + 0.8*cm
+        p_label = Paragraph("Orientadora:" if "Profa" in dados.get("orientador_tipo") else "Orientador:", s_orient); w, h = p_label.wrapOn(c, width/2-2*cm, y); p_label.drawOn(c, width/2, y-h); y -= h + 0.1*cm
+        p_nome = Paragraph(f"{dados.get('orientador_tipo')} {dados.get('orientador')}", s_orient); w, h = p_nome.wrapOn(c, width/2-2*cm, y); p_nome.drawOn(c, width/2, y-h); y -= h + 0.8*cm
     
     if dados.get("coorientador"):
-        p_label_co = Paragraph("Coorientadora:" if "Profa" in dados.get("coorientador_tipo") else "Coorientador:", style_orientador); w, h = p_label_co.wrapOn(c, width/2-2*cm, y); p_label_co.drawOn(c, width/2, y-h); y -= h + 0.1*cm
-        p_nome_co = Paragraph(f"{dados.get('coorientador_tipo')} {dados.get('coorientador')}", style_orientador); w, h = p_nome_co.wrapOn(c, width/2-2*cm, y); p_nome_co.drawOn(c, width/2, y-h)
+        p_label_co = Paragraph("Coorientadora:" if "Profa" in dados.get("coorientador_tipo") else "Coorientador:", s_orient); w, h = p_label_co.wrapOn(c, width/2-2*cm, y); p_label_co.drawOn(c, width/2, y-h); y -= h + 0.1*cm
+        p_nome_co = Paragraph(f"{dados.get('coorientador_tipo')} {dados.get('coorientador')}", s_orient); w, h = p_nome_co.wrapOn(c, width/2-2*cm, y); p_nome_co.drawOn(c, width/2, y-h)
     
     c.setFont("Helvetica", 12); c.drawCentredString(width/2, 5.5*cm, "São Paulo"); c.drawCentredString(width/2, 5*cm, dados.get("ano","")); c.save()
 
