@@ -36,31 +36,29 @@ def clean_html_for_reportlab(html_string):
     e tratando quebras de linha indesejadas de divs e ps.
     """
     if not html_string or not isinstance(html_string, str):
-        return html_string
+        return ""
     
-    soup = BeautifulSoup(html_string, 'html.parser')
+    # Adiciona um nó raiz para garantir que o BeautifulSoup processe fragmentos
+    soup = BeautifulSoup(f"<div>{html_string}</div>", 'html.parser')
     
     # Remove atributos inválidos e tags que não preservam conteúdo
     for tag in soup.find_all(True):
+        allowed_attrs = []
         if tag.name == 'font':
-            allowed_attrs = {'color', 'face', 'size'}
-            attrs = dict(tag.attrs)
-            for attr in attrs:
-                if attr.lower() not in allowed_attrs:
-                    del tag[attr]
-        elif tag.name not in ['b', 'i', 'u', 'strong', 'em', 'sup', 'sub', 'br', 'p', 'div', 'a']:
-             tag.unwrap()
+            allowed_attrs = ['color', 'face', 'size']
+        elif tag.name == 'a':
+            allowed_attrs = ['href']
+            
+        attrs = dict(tag.attrs)
+        for attr in attrs:
+            if attr.lower() not in allowed_attrs:
+                del tag[attr]
 
-    # Substitui tags <p> e <div> por seu conteúdo seguido de um espaço para evitar junção de palavras
+    # Substitui tags <p> e <div> por seu conteúdo seguido de um espaço.
     for tag in soup.find_all(['p', 'div']):
         tag.replace_with(NavigableString(tag.decode_contents() + ' '))
 
-    if soup.body:
-        cleaned_html = soup.body.encode_contents().decode('utf-8').strip()
-    else:
-        cleaned_html = str(soup).strip()
-
-    # Garante <br/> e remove múltiplos espaços
+    cleaned_html = soup.decode_contents().strip()
     return cleaned_html.replace('<br>', '<br/>').replace('\n', ' ').replace('\r', ' ').strip()
 
 
@@ -106,13 +104,9 @@ def gerar_capa(dados, buffer):
     width, height = A4
     nivel = dados.get("nivel", "")
     
-    # Lógica de cores corrigida
-    if "Mestrado Profissional" in nivel:
-        cor_faixas = (129/255, 0/255, 64/255)
-    elif "Mestrado" in nivel:
-        cor_faixas = (30/255, 143/255, 113/255)
-    else: # Default para Tese/Doutorado
-        cor_faixas = (52/255, 14/255, 113/255)
+    if "Mestrado Profissional" in nivel: cor_faixas = (129/255, 0/255, 64/255)
+    elif "Mestrado" in nivel: cor_faixas = (30/255, 143/255, 113/255)
+    else: cor_faixas = (52/255, 14/255, 113/255)
     c.setFillColorRGB(*cor_faixas)
     
     top_margin, f_fina, f_grossa, esp, f_comp = 16*mm, 2.7*mm, 4.8*mm, 1.2*mm, 78*mm
@@ -279,13 +273,9 @@ def gerar_contracapa(dados, buffer):
     width, height = A4
     nivel = dados.get("nivel", "")
     
-    # Lógica de cores corrigida
-    if "Mestrado Profissional" in nivel:
-        cor_faixas = (129/255, 0/255, 64/255)
-    elif "Mestrado" in nivel:
-        cor_faixas = (30/255, 143/255, 113/255)
-    else: # Default para Tese/Doutorado
-        cor_faixas = (52/255, 14/255, 113/255)
+    if "Mestrado Profissional" in nivel: cor_faixas = (129/255, 0/255, 64/255)
+    elif "Mestrado" in nivel: cor_faixas = (30/255, 143/255, 113/255)
+    else: cor_faixas = (52/255, 14/255, 113/255)
     c.setFillColorRGB(*cor_faixas)
 
     f_fina, f_grossa, esp = 2.7*mm, 4.8*mm, 1.2*mm
