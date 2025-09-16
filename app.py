@@ -57,18 +57,14 @@ def clean_html_for_reportlab(html_string):
     for tag in soup.find_all(['p', 'div']):
         tag.replace_with(NavigableString(tag.decode_contents() + ' '))
 
-    # Adicionando a verificação para garantir que soup.div não seja None
     if soup.div is None:
         return ""
         
-    # Converte o soup de volta para uma string e remove quebras de linha HTML
     cleaned_html = str(soup.div.decode_contents()).replace('\n', ' ').replace('\r', ' ').strip()
     
-    # Remove espaços extras antes e depois de tags e substitui múltiplos espaços por um único
     cleaned_html = re.sub(r'\s*<br\s*/>\s*', '<br/>', cleaned_html)
     cleaned_html = re.sub(r'(\s+)', ' ', cleaned_html)
     
-    # Substitui tags <i> e <b> com a formatação correta do ReportLab
     cleaned_html = cleaned_html.replace("<i>", "<i>").replace("</i>", "</i>")
     cleaned_html = cleaned_html.replace("<b>", "<b>").replace("</b>", "</b>")
     

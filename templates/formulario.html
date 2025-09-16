@@ -322,20 +322,17 @@
 
         const form = document.getElementById('main-form');
         form.addEventListener('submit', function(event) {
-            event.preventDefault(); // Previne o envio padrão do formulário
+            event.preventDefault(); 
             
             const formData = new FormData(form);
 
-            // Adiciona o conteúdo dos campos editáveis ao FormData
             document.querySelectorAll('.visual-editor').forEach(editor => {
                 const name = editor.getAttribute('name');
                 if (name) {
-                    // Adiciona o conteúdo HTML do campo ao objeto FormData
                     formData.append(name, editor.innerHTML);
                 }
             });
 
-            // Envia os dados manualmente via fetch API
             fetch(form.action, {
                 method: form.method,
                 body: new URLSearchParams(formData).toString(),
