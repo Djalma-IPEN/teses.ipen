@@ -320,7 +320,6 @@
             });
         });
 
-        // Corrigindo o envio do formulário de forma robusta
         const form = document.getElementById('main-form');
         form.addEventListener('submit', function(event) {
             event.preventDefault(); // Previne o envio padrão do formulário
@@ -331,6 +330,7 @@
             document.querySelectorAll('.visual-editor').forEach(editor => {
                 const name = editor.getAttribute('name');
                 if (name) {
+                    // Adiciona o conteúdo HTML do campo ao objeto FormData
                     formData.append(name, editor.innerHTML);
                 }
             });
@@ -357,7 +357,7 @@
                             a.click();
                             a.remove();
                             window.URL.revokeObjectURL(url);
-                            location.reload(); // Recarrega a página após o download
+                            location.reload(); 
                         });
                     } else {
                         return response.text().then(text => {
