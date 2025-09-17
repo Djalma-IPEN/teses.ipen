@@ -48,6 +48,9 @@
         }
         .visual-editor sup { vertical-align: super; font-size: smaller; }
         .visual-editor sub { vertical-align: sub; font-size: smaller; }
+
+        /* Esconde o textarea real */
+        .hidden-textarea { display: none; }
     </style>
 </head>
 <body class="bg-gray-100 font-sans">
@@ -117,10 +120,10 @@
                 <fieldset class="border-t pt-6 campo-grupo" data-campos="titulo,subtitulo,titulo_traduzido,subtitulo_traduzido">
                     <legend class="text-xl font-semibold text-gray-700 mb-4">4. Título e Subtítulo</legend>
                     <div class="space-y-6">
-                        <div class="campo-item editor-container" data-campo="titulo"><label for="titulo" class="block text-sm font-medium text-gray-700 mb-1">Título do trabalho<span class="required-asterisk text-red-500 ml-1 hidden">*</span></label><div id="titulo_editor" contenteditable="true" name="titulo" class="visual-editor" style="min-height: 84px;">{{ dados.get('titulo', '')|safe }}</div></div>
-                        <div class="campo-item editor-container" data-campo="subtitulo"><label for="subtitulo" class="block text-sm font-medium text-gray-700 mb-1">Subtítulo (opcional)</label><div id="subtitulo_editor" contenteditable="true" name="subtitulo" class="visual-editor" style="min-height: 64px;">{{ dados.get('subtitulo', '')|safe }}</div></div>
-                        <div class="campo-item editor-container" data-campo="titulo_traduzido"><label for="titulo_traduzido" class="block text-sm font-medium text-gray-700 mb-1">Título traduzido<span class="required-asterisk text-red-500 ml-1 hidden">*</span></label><div id="titulo_traduzido_editor" contenteditable="true" name="titulo_traduzido" class="visual-editor" style="min-height: 84px;">{{ dados.get('titulo_traduzido', '')|safe }}</div></div>
-                        <div class="campo-item editor-container" data-campo="subtitulo_traduzido"><label for="subtitulo_traduzido" class="block text-sm font-medium text-gray-700 mb-1">Subtítulo traduzido (opcional)</label><div id="subtitulo_traduzido_editor" contenteditable="true" name="subtitulo_traduzido" class="visual-editor" style="min-height: 64px;">{{ dados.get('subtitulo_traduzido', '')|safe }}</div></div>
+                        <div class="campo-item editor-container" data-campo="titulo"><label for="titulo" class="block text-sm font-medium text-gray-700 mb-1">Título do trabalho<span class="required-asterisk text-red-500 ml-1 hidden">*</span></label><div id="titulo_editor" contenteditable="true" class="visual-editor" style="min-height: 84px;">{{ dados.get('titulo', '')|safe }}</div><textarea id="titulo" name="titulo" class="hidden-textarea">{{ dados.get('titulo', '') }}</textarea></div>
+                        <div class="campo-item editor-container" data-campo="subtitulo"><label for="subtitulo" class="block text-sm font-medium text-gray-700 mb-1">Subtítulo (opcional)</label><div id="subtitulo_editor" contenteditable="true" class="visual-editor" style="min-height: 64px;">{{ dados.get('subtitulo', '')|safe }}</div><textarea id="subtitulo" name="subtitulo" class="hidden-textarea">{{ dados.get('subtitulo', '') }}</textarea></div>
+                        <div class="campo-item editor-container" data-campo="titulo_traduzido"><label for="titulo_traduzido" class="block text-sm font-medium text-gray-700 mb-1">Título traduzido<span class="required-asterisk text-red-500 ml-1 hidden">*</span></label><div id="titulo_traduzido_editor" contenteditable="true" class="visual-editor" style="min-height: 84px;">{{ dados.get('titulo_traduzido', '')|safe }}</div><textarea id="titulo_traduzido" name="titulo_traduzido" class="hidden-textarea">{{ dados.get('titulo_traduzido', '') }}</textarea></div>
+                        <div class="campo-item editor-container" data-campo="subtitulo_traduzido"><label for="subtitulo_traduzido" class="block text-sm font-medium text-gray-700 mb-1">Subtítulo traduzido (opcional)</label><div id="subtitulo_traduzido_editor" contenteditable="true" class="visual-editor" style="min-height: 64px;">{{ dados.get('subtitulo_traduzido', '')|safe }}</div><textarea id="subtitulo_traduzido" name="subtitulo_traduzido" class="hidden-textarea">{{ dados.get('subtitulo_traduzido', '') }}</textarea></div>
                     </div>
                 </fieldset>
 
@@ -139,11 +142,11 @@
                      <div class="grid md:grid-cols-2 gap-6">
                         <div id="chaves-pt-container" class="space-y-2">
                             <h3 class="font-semibold text-gray-600">Palavras-chave (PT)</h3>
-                            {% for i in range(1, 6) %}<div class="editor-container"><div id="chave{{i}}_editor" contenteditable="true" name="chave{{i}}" class="visual-editor" data-placeholder="Palavra-chave {{i}}">{{ dados.get('chave' ~ i, '')|safe }}</div></div>{% endfor %}
+                            {% for i in range(1, 6) %}<div class="editor-container"><div id="chave{{i}}_editor" contenteditable="true" class="visual-editor" data-placeholder="Palavra-chave {{i}}">{{ dados.get('chave' ~ i, '')|safe }}</div><textarea id="chave{{i}}" name="chave{{i}}" class="hidden-textarea">{{ dados.get('chave' ~ i, '') }}</textarea></div>{% endfor %}
                         </div>
                         <div id="chaves-en-container" class="space-y-2">
                              <h3 class="font-semibold text-gray-600">Keywords (EN)</h3>
-                             {% for i in range(1, 6) %}<div class="editor-container"><div id="keyword{{i}}_editor" contenteditable="true" name="keyword{{i}}" class="visual-editor" data-placeholder="Keyword {{i}}">{{ dados.get('keyword' ~ i, '')|safe }}</div></div>{% endfor %}
+                             {% for i in range(1, 6) %}<div class="editor-container"><div id="keyword{{i}}_editor" contenteditable="true" class="visual-editor" data-placeholder="Keyword {{i}}">{{ dados.get('keyword' ~ i, '')|safe }}</div><textarea id="keyword{{i}}" name="keyword{{i}}" class="hidden-textarea">{{ dados.get('keyword' ~ i, '') }}</textarea></div>{% endfor %}
                         </div>
                      </div>
                 </fieldset>
@@ -153,12 +156,14 @@
                     <div class="space-y-6">
                         <div class="editor-container">
                             <label for="resumo" class="block text-sm font-medium text-gray-700 mb-1">Resumo (no idioma principal)<span class="required-asterisk text-red-500 ml-1 hidden">*</span></label>
-                            <div id="resumo_editor" contenteditable="true" name="resumo" class="visual-editor" style="min-height: 160px;" data-placeholder="Insira o resumo no idioma principal aqui...">{{ dados.get('resumo', '')|safe }}</div>
+                            <div id="resumo_editor" contenteditable="true" class="visual-editor" style="min-height: 160px;" data-placeholder="Insira o resumo no idioma principal aqui...">{{ dados.get('resumo', '')|safe }}</div>
+                            <textarea id="resumo" name="resumo" class="hidden-textarea">{{ dados.get('resumo', '') }}</textarea>
                             <div class="text-right text-sm text-gray-500 mt-1"><span id="resumo-word-count">0</span>/500 palavras</div>
                         </div>
                         <div class="editor-container">
                              <label for="abstract" class="block text-sm font-medium text-gray-700 mb-1">Resumo (no idioma traduzido)<span class="required-asterisk text-red-500 ml-1 hidden">*</span></label>
-                             <div id="abstract_editor" contenteditable="true" name="abstract" class="visual-editor" style="min-height: 160px;" data-placeholder="Insira o resumo no idioma traduzido aqui...">{{ dados.get('abstract', '')|safe }}</div>
+                             <div id="abstract_editor" contenteditable="true" class="visual-editor" style="min-height: 160px;" data-placeholder="Insira o resumo no idioma traduzido aqui...">{{ dados.get('abstract', '')|safe }}</div>
+                             <textarea id="abstract" name="abstract" class="hidden-textarea">{{ dados.get('abstract', '') }}</textarea>
                              <div class="text-right text-sm text-gray-500 mt-1"><span id="abstract-word-count">0</span>/500 palavras</div>
                         </div>
                     </div>
@@ -174,20 +179,12 @@
 
     <script>
     document.addEventListener('DOMContentLoaded', function () {
-        const CAMPOS_POR_DOCUMENTO_FRONTEND = {
-            "capa": ["nivel", "area", "nome_completo", "sobrenome", "titulo", "subtitulo", "ano", "orientador_completo"],
-            "pagina_rosto": ["versao", "nivel", "area", "nome_completo", "sobrenome", "titulo", "subtitulo", "ano", "orientador_completo"],
-            "ficha": ["licenca", "idioma", "nivel", "area", "bolsa", "nome_citacao", "nome_completo", "sobrenome", "titulo", "subtitulo", "ano", "paginas", "orientador_completo", "chaves_keywords"],
-            "resumo": ["idioma", "nivel", "area", "nome_citacao", "titulo", "subtitulo", "titulo_traduzido", "subtitulo_traduzido", "ano", "paginas", "chaves_keywords", "resumos"],
-            "abstract": ["idioma", "nivel", "area", "nome_citacao", "titulo", "subtitulo", "titulo_traduzido", "subtitulo_traduzido", "ano", "paginas", "chaves_keywords", "resumos"],
-            "contracapa": ["nivel"],
-        };
         const CAMPOS_OBRIGATORIOS_BASE = {
             capa: ["nivel", "area", "nome_completo", "sobrenome", "titulo", "ano", "orientador_tipo", "orientador"],
             pagina_rosto: ["versao", "nivel", "area", "nome_completo", "sobrenome", "titulo", "ano", "orientador_tipo", "orientador"],
             ficha: ["licenca", "idioma", "nivel", "area", "nome_citacao", "nome_completo", "sobrenome", "titulo", "ano", "paginas", "orientador_tipo", "orientador", "chaves_keywords"],
-            resumo: ["idioma", "nivel", "area", "nome_citacao", "titulo", "titulo_traduzido", "ano", "paginas", "chaves_keywords", "resumos"],
-            abstract: ["idioma", "nivel", "area", "nome_citacao", "titulo", "titulo_traduzido", "ano", "paginas", "chaves_keywords", "resumos"],
+            resumo: ["idioma", "nivel", "area", "nome_citacao", "titulo", "titulo_traduzido", "ano", "paginas", "chaves_keywords", "resumo", "abstract"],
+            abstract: ["idioma", "nivel", "area", "nome_citacao", "titulo", "titulo_traduzido", "ano", "paginas", "chaves_keywords", "resumo", "abstract"],
             contracapa: ["nivel"],
         };
 
@@ -195,22 +192,14 @@
         const idiomaSelect = document.getElementById('idioma');
         const nivelSelect = document.getElementById('nivel');
         const areaSelect = document.getElementById('area');
-        
-        const campoMap = { 'orientador_tipo': 'orientador_tipo', 'orientador': 'orientador', 'coorientador_tipo': 'coorientador_tipo', 'coorientador': 'coorientador' };
-        
-        const grupoCamposVisibilidade = {
-            'orientador_completo': ['orientador_tipo', 'orientador', 'coorientador_tipo', 'coorientador'],
-            'resumos': ['resumo', 'abstract'],
-            'chaves_keywords': Array.from({length: 5}, (_, i) => `chave${i+1}`).concat(Array.from({length: 5}, (_, i) => `keyword${i+1}`))
-        };
-        
+
         function atualizarVisibilidade() {
             const docsSelecionados = Array.from(checkboxes).filter(cb => cb.checked).map(cb => cb.value);
             let camposVisiveis = new Set();
             let camposObrigatorios = new Set();
 
             docsSelecionados.forEach(doc => {
-                const campos = CAMPOS_POR_DOCUMENTO_FRONTEND[doc] || [];
+                const campos = CAMPOS_POR_DOCUMENTO[doc] || [];
                 const obrigatorios = CAMPOS_OBRIGATORIOS_BASE[doc] || [];
                 campos.forEach(c => camposVisiveis.add(c));
                 obrigatorios.forEach(c => camposObrigatorios.add(c));
@@ -218,49 +207,29 @@
 
             document.querySelectorAll('.campo-grupo').forEach(grupo => {
                 const camposDoGrupo = grupo.dataset.campos.split(',');
-                let deveMostrarGrupo = false;
-                for (let campo of camposDoGrupo) {
-                    if (camposVisiveis.has(campo)) {
-                        deveMostrarGrupo = true;
-                        break;
-                    }
-                    if (grupoCamposVisibilidade[campo]) {
-                        if (grupoCamposVisibilidade[campo].some(c => camposVisiveis.has(c))) {
-                            deveMostrarGrupo = true;
-                            break;
-                        }
-                    }
-                }
+                const deveMostrarGrupo = camposDoGrupo.some(c => camposVisiveis.has(c));
                 grupo.style.display = deveMostrarGrupo ? '' : 'none';
             });
             
             document.querySelectorAll('.campo-item').forEach(item => {
                 const campo = item.dataset.campo;
-                if (grupoCamposVisibilidade[campo]) {
-                    item.style.display = grupoCamposVisibilidade[campo].some(c => camposVisiveis.has(c)) ? '' : 'none';
-                } else {
-                    item.style.display = camposVisiveis.has(campo) ? '' : 'none';
-                }
+                item.style.display = camposVisiveis.has(campo) ? '' : 'none';
             });
             
             document.querySelectorAll('label > .required-asterisk').forEach(asterisk => {
                 const label = asterisk.parentElement;
                 const fieldId = label.getAttribute('for');
-                const campoName = campoMap[fieldId] || fieldId;
+                const campoId = fieldId || (label.closest('.campo-item') ? label.closest('.campo-item').dataset.campo : null);
+                
+                // Mapeia IDs para os nomes de validação
+                const campoMap = { 'orientador_tipo': 'orientador_tipo', 'orientador': 'orientador' };
+                const campoName = campoMap[campoId] || campoId;
+
                 asterisk.classList.toggle('hidden', !camposObrigatorios.has(campoName));
             });
             
-            const legendChaves = document.querySelector('fieldset[data-campos="chaves_keywords"] > legend > .required-asterisk');
-            if (legendChaves) {
-                const isChavesObrigatorio = camposObrigatorios.has('chaves_keywords');
-                const isResumosObrigatorio = camposObrigatorios.has('resumos');
-                legendChaves.classList.toggle('hidden', !isChavesObrigatorio);
-            }
-            const legendResumos = document.querySelector('fieldset[data-campos="resumos"] > legend > .required-asterisk');
-            if (legendResumos) {
-                 const isResumosObrigatorio = camposObrigatorios.has('resumos');
-                 legendResumos.classList.toggle('hidden', !isResumosObrigatorio);
-            }
+            // Lógica especial para asterisco de 'chaves_keywords' e 'resumos'
+            document.querySelector('legend > .required-asterisk')?.classList.toggle('hidden', !camposObrigatorios.has('chaves_keywords') && !camposObrigatorios.has('resumos'));
 
 
             const apenasFicha = docsSelecionados.length === 1 && docsSelecionados[0] === 'ficha';
@@ -280,25 +249,21 @@
                 if (a === areaAtual) option.selected = true;
                 areaSelect.add(option);
             });
-            if (areaSelect.options.length > 0 && !areaSelect.value) {
-                areaSelect.selectedIndex = 0;
-            }
-        }
-        
-        function getWordCount(text) {
-            return text ? (text.match(/\S+/g) || []).length : 0;
+            if (!areaSelect.value) areaSelect.selectedIndex = 0;
         }
 
         checkboxes.forEach(cb => cb.addEventListener('change', atualizarVisibilidade));
         idiomaSelect.addEventListener('change', atualizarVisibilidade);
         nivelSelect.addEventListener('change', () => { atualizarAreas(); atualizarVisibilidade(); });
-        
+
         ['resumo', 'abstract'].forEach(id => {
             const editor = document.getElementById(`${id}_editor`);
+            const textarea = document.getElementById(id);
             const countElement = document.getElementById(`${id}-word-count`);
             const update = () => {
+                textarea.value = editor.innerHTML;
                 const text = editor.innerText.trim();
-                const wordCount = getWordCount(text);
+                const wordCount = text ? (text.match(/\S+/g) || []).length : 0;
                 countElement.textContent = wordCount;
                 countElement.parentElement.classList.toggle('text-red-600', wordCount > 500);
             };
@@ -308,6 +273,8 @@
 
         const formattingPanel = document.getElementById('formatting-buttons-panel');
         document.querySelectorAll('.visual-editor').forEach(editor => {
+            const textarea = editor.nextElementSibling;
+            editor.addEventListener('input', () => { textarea.value = editor.innerHTML; });
             editor.addEventListener('focus', () => {
                 const container = editor.closest('.editor-container');
                 container.appendChild(formattingPanel);
@@ -317,60 +284,6 @@
                 if (!e.relatedTarget || !e.relatedTarget.closest('.formatting-buttons')) {
                     formattingPanel.style.display = 'none';
                 }
-            });
-        });
-
-        const form = document.getElementById('main-form');
-        form.addEventListener('submit', function(event) {
-            event.preventDefault(); // Previne o envio padrão do formulário
-            
-            const formData = new FormData(form);
-
-            document.querySelectorAll('.visual-editor').forEach(editor => {
-                const name = editor.getAttribute('name');
-                if (name) {
-                    const value = editor.innerHTML;
-                    formData.append(name, value);
-                }
-            });
-
-            fetch(form.action, {
-                method: form.method,
-                body: new URLSearchParams(formData).toString(),
-                headers: {
-                    'Content-Type': 'application/x-www-form-urlencoded'
-                }
-            })
-            .then(response => {
-                if (response.ok) {
-                    const contentDisposition = response.headers.get('Content-Disposition');
-                    if (contentDisposition && contentDisposition.includes('attachment')) {
-                        const filename = contentDisposition.split('filename=')[1].replace(/['"]/g, '');
-                        return response.blob().then(blob => {
-                            const url = window.URL.createObjectURL(blob);
-                            const a = document.createElement('a');
-                            a.href = url;
-                            a.download = filename;
-                            document.body.appendChild(a);
-                            a.click();
-                            a.remove();
-                            window.URL.revokeObjectURL(url);
-                            location.reload(); 
-                        });
-                    } else {
-                        return response.text().then(text => {
-                            document.body.innerHTML = text;
-                        });
-                    }
-                } else {
-                    return response.text().then(text => {
-                         document.body.innerHTML = text;
-                    });
-                }
-            })
-            .catch(error => {
-                console.error('Erro no envio do formulário:', error);
-                alert('Ocorreu um erro ao enviar o formulário. Por favor, tente novamente.');
             });
         });
         
