@@ -56,11 +56,12 @@ def clean_html_for_reportlab(html_string):
 
     # Substitui tags <p> e <div> por seu conteúdo seguido de um espaço.
     for tag in soup.find_all(['p', 'div']):
-        tag.replace_with(NavigableString(tag.decode_contents() + ' '))
+        tag.unwrap()  # mantém o conteúdo interno (inclusive tags de formatação)
 
     cleaned_html = soup.decode_contents().strip()
-    return cleaned_html.replace('<br>', '<br/>').replace('\n', ' ').replace('\r', ' ').strip()
-
+    cleaned_html = cleaned_html.replace('<br>', ' ').replace('<br/>', ' ')
+    cleaned_html = cleaned_html.replace('\n', ' ').replace('\r', ' ').strip()
+    return cleaned_html
 
 def static_file_path(filename):
     """ Retorna o caminho absoluto para um arquivo na pasta static. """
@@ -141,7 +142,7 @@ def gerar_capa(dados, buffer):
     titulo_completo = dados.get('titulo','') + (f": {dados.get('subtitulo','')}" if dados.get('subtitulo') else ""); p_titulo = Paragraph(titulo_completo, s_titulo)
     w, h = p_titulo.wrapOn(c, width-4*cm, y); p_titulo.drawOn(c, 2*cm, y-h); y -= h + 2*cm
     
-    autor = f"{dados.get('nome_completo','')} {dados.get('sobrenome','')} ridiculously long".upper(); p_autor = Paragraph(autor, s_autor)
+    autor = f"{dados.get('nome_completo','')} {dados.get('sobrenome','')}".upper(); p_autor = Paragraph(autor, s_autor)
     w, h = p_autor.wrapOn(c, width-4*cm, y); p_autor.drawOn(c, 2*cm, y-h); y -= h + 4.5*cm
     
     if "Mestrado Profissional" in nivel: t_final = f"Dissertação apresentada como parte dos requisitos para obtenção do Grau de Mestre Profissional em Tecnologia das Radiações em Ciências da Saúde na Área de {dados.get('area','')}"
@@ -183,7 +184,7 @@ def gerar_pagina_rosto(dados, buffer):
     p_versao = Paragraph(versao_texto, style_versao)
     w, h = p_versao.wrapOn(c, width-4*cm, y); p_versao.drawOn(c, 2*cm, y - h); y -= h + 2*cm
     
-    autor = f"{dados.get('nome_completo','')} {dados.get('sobrenome','')} ridiculously long".upper()
+    autor = f"{dados.get('nome_completo','')} {dados.get('sobrenome','')}".upper()
     p_autor = Paragraph(autor, style_normal_center)
     w, h = p_autor.wrapOn(c, width-4*cm, y); p_autor.drawOn(c, 2*cm, y - h); y -= h + 4.5*cm
     

@@ -187,6 +187,15 @@
             abstract: ["idioma", "nivel", "area", "nome_citacao", "titulo", "titulo_traduzido", "ano", "paginas", "chaves_keywords", "resumo", "abstract"],
             contracapa: ["nivel"],
         };
+        
+        const CAMPOS_POR_DOCUMENTO = {
+            capa: ["nivel", "area", "nome_completo", "sobrenome", "titulo", "ano", "orientador_tipo", "orientador"],
+            pagina_rosto: ["versao", "nivel", "area", "nome_completo", "sobrenome", "titulo", "ano", "orientador_tipo", "orientador"],
+            ficha: ["licenca", "idioma", "nivel", "area", "nome_citacao", "nome_completo", "sobrenome", "titulo", "ano", "paginas", "orientador_tipo", "orientador", "chaves_keywords"],
+            resumo: ["idioma", "nivel", "area", "nome_citacao", "titulo", "titulo_traduzido", "ano", "paginas", "chaves_keywords", "resumo", "abstract"],
+            abstract: ["idioma", "nivel", "area", "nome_citacao", "titulo", "titulo_traduzido", "ano", "paginas", "chaves_keywords", "resumo", "abstract"],
+            contracapa: ["nivel"],
+        };
 
         const checkboxes = document.querySelectorAll('input[name="documentos"]');
         const idiomaSelect = document.getElementById('idioma');
