@@ -188,14 +188,16 @@
             contracapa: ["nivel"],
         };
 
+        // --- CORREÇÃO APLICADA AQUI ---
         const CAMPOS_POR_DOCUMENTO = {
-            capa: ["nivel", "area", "nome_completo", "sobrenome", "titulo", "ano", "orientador_tipo", "orientador"],
-            pagina_rosto: ["versao", "nivel", "area", "nome_completo", "sobrenome", "titulo", "ano", "orientador_tipo", "orientador"],
-            ficha: ["licenca", "idioma", "nivel", "area", "nome_citacao", "nome_completo", "sobrenome", "titulo", "ano", "paginas", "orientador_tipo", "orientador", "chaves_keywords"],
-            resumo: ["idioma", "nivel", "area", "nome_citacao", "titulo", "titulo_traduzido", "ano", "paginas", "chaves_keywords", "resumo", "abstract"],
-            abstract: ["idioma", "nivel", "area", "nome_citacao", "titulo", "titulo_traduzido", "ano", "paginas", "chaves_keywords", "resumo", "abstract"],
+            capa: ["nivel", "area", "nome_completo", "sobrenome", "titulo", "subtitulo", "ano", "orientador_completo"],
+            pagina_rosto: ["versao", "nivel", "area", "nome_completo", "sobrenome", "titulo", "subtitulo", "ano", "orientador_completo"],
+            ficha: ["licenca", "idioma", "nivel", "area", "nome_citacao", "nome_completo", "sobrenome", "titulo", "subtitulo", "ano", "paginas", "orientador_completo", "chaves_keywords", "bolsa"],
+            resumo: ["idioma", "nivel", "area", "nome_citacao", "titulo", "subtitulo", "titulo_traduzido", "subtitulo_traduzido", "ano", "paginas", "chaves_keywords", "resumos"],
+            abstract: ["idioma", "nivel", "area", "nome_citacao", "titulo", "subtitulo", "titulo_traduzido", "subtitulo_traduzido", "ano", "paginas", "chaves_keywords", "resumos"],
             contracapa: ["nivel"],
         };
+        // --- FIM DA CORREÇÃO ---
 
         const checkboxes = document.querySelectorAll('input[name="documentos"]');
         const idiomaSelect = document.getElementById('idioma');
