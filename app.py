@@ -221,8 +221,8 @@ def gerar_ficha_catalografica(dados, buffer):
     p_citacao = Paragraph(obter_texto_citacao(dados), ParagraphStyle(name='Citacao', fontName='Helvetica', fontSize=11, leading=13, alignment=TA_JUSTIFY)); w, h = p_citacao.wrapOn(c, largura_texto-10, y); p_citacao.drawOn(c, margem_esq, y-h); y -= h + 15
     
     largura_quadro = largura_texto * 0.80; x_quadro = margem_esq + (largura_texto - largura_quadro)/2; y_quadro_topo = 4*cm
-    orientador = dados.get("orientador", ""); texto_orientador = f"orientadora {orientador}" if "Profa" in dados.get("orientador_tipo") else f"orientador {orientador}"
-    coorientador = dados.get("coorientador", ""); texto_coorientador = f"coorientadora {coorientador}" if "Profa" in dados.get("coorientador_tipo") else f"coorientador {coorientador}"
+    orientador = dados.get("orientador", ""); texto_orientador = f"orientadora {orientador}" if "Profa" in dados.get("orientador_tipo", "") else f"orientador {orientador}"
+    coorientador = dados.get("coorientador", ""); texto_coorientador = f"coorientadora {coorientador}" if "Profa" in dados.get("coorientador_tipo", "") else f"coorientador {coorientador}"
     programa = f"Programa de Pós-Graduação em Tecnologia das Radiações em Ciências da Saúde ({dados.get('area','')})" if "Mestrado Profissional" in dados.get('nivel','') else f"Programa de Pós-Graduação em Tecnologia Nuclear ({dados.get('area','')})"
     titulo_completo_ficha = dados.get('titulo','').strip() + (f": {dados['subtitulo'].strip()}" if dados.get('subtitulo') else "")
     romanos = f"I. {orientador}, orient. II. {coorientador}, coorient. III. Título." if orientador and coorientador else (f"I. {orientador}, orient. II. Título." if orientador else "I. Título.")
