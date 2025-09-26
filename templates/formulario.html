@@ -85,6 +85,9 @@
                     </label>
                     {% endfor %}
                 </div>
+                <p class="text-red-600 text-sm font-semibold mt-2">
+                    Atenção: desmarque os tipos de documento que não deseja gerar.
+                </p>
             </fieldset>
 
             <div id="formatting-buttons-panel" class="formatting-buttons" style="display: none;">
@@ -104,7 +107,7 @@
                         <div class="campo-item" data-campo="versao"><label for="versao" class="block text-sm font-medium text-gray-700 mb-1">Versão do trabalho<span class="required-asterisk text-red-500 ml-1 hidden">*</span></label><select id="versao" name="versao" class="mt-1 block w-full bg-gray-50 rounded-md border-gray-300 shadow-sm"><option value="" disabled {% if not dados.get('versao') %}selected{% endif %}>Selecione...</option><option value="Versão Corrigida" {% if dados.get('versao') == 'Versão Corrigida' %}selected{% endif %}>Versão Corrigida</option><option value="Versão Original" {% if dados.get('versao') == 'Versão Original' %}selected{% endif %}>Versão Original</option></select></div>
                         <div class="campo-item" data-campo="nivel"><label for="nivel" class="block text-sm font-medium text-gray-700 mb-1">Nível<span class="required-asterisk text-red-500 ml-1 hidden">*</span></label><select id="nivel" name="nivel" class="mt-1 block w-full bg-gray-50 rounded-md border-gray-300 shadow-sm"><option value="" disabled {% if not dados.get('nivel') %}selected{% endif %}>Selecione...</option><option value="Tese (Doutorado)" {% if dados.get('nivel') == 'Tese (Doutorado)' %}selected{% endif %}>Tese (Doutorado)</option><option value="Dissertação (Mestrado)" {% if dados.get('nivel') == 'Dissertação (Mestrado)' %}selected{% endif %}>Dissertação (Mestrado)</option><option value="Dissertação (Mestrado Profissional)" {% if dados.get('nivel') == 'Dissertação (Mestrado Profissional)' %}selected{% endif %}>Dissertação (Mestrado Profissional)</option></select></div>
                         <div class="campo-item" data-campo="area"><label for="area" class="block text-sm font-medium text-gray-700 mb-1">Área de concentração<span class="required-asterisk text-red-500 ml-1 hidden">*</span></label><select id="area" name="area" class="mt-1 block w-full bg-gray-50 rounded-md border-gray-300 shadow-sm"><option value="">Selecione um nível primeiro...</option></select></div>
-                        <div class="campo-item" data-campo="licenca"><label for="licenca" class="block text-sm font-medium text-gray-700 mb-1">Licença<span class="required-asterisk text-red-500 ml-1 hidden">*</span></label><select id="licenca" name="licenca" class="mt-1 block w-full bg-gray-50 rounded-md border-gray-300 shadow-sm"><option value="" disabled {% if not dados.get('licenca') %}selected{% endif %}>Selecione...</option>{% for lic in ["CC0 1.0", "CC-BY 4.0", "CC-BY-SA 4.0", "CC-BY-ND 4.0", "CC-BY-NC 4.0", "CC-BY-NC-SA 4.0", "CC-BY-NC-ND 4.0"] %}<option value="{{ lic }}" {% if dados.get('licenca') == lic %}selected{% endif %}>{{ lic }}</option>{% endfor %}</select><a href="https://creativecommons.org/share-your-work/cclicenses/" target="_blank" class="block text-xs text-blue-600 hover:underline mt-1">Dúvidas com relação à licença? Acesse aqui</a></div>
+                        <div class="campo-item" data-campo="licenca"><label for="licenca" class="block text-sm font-medium text-gray-700 mb-1">Licença<span class="required-asterisk text-red-500 ml-1 hidden">*</span></label><select id="licenca" name="licenca" class="mt-1 block w-full bg-gray-50 rounded-md border-gray-300 shadow-sm"><option value="" disabled {% if not dados.get('licenca') %}selected{% endif %}>Selecione...</option>{% for lic in ["CC-BY-NC 4.0"] %}<option value="{{ lic }}" {% if dados.get('licenca') == lic %}selected{% endif %}>{{ lic }}</option>{% endfor %}</select><a href="https://www.gov.br/ipen" target="_blank" class="block text-xs text-blue-600 hover:underline mt-1">Dúvidas com relação à licença? Acesse nosso Guia para a elaboração de teses e dissertações</a></div>
                     </div>
                 </fieldset>
 
@@ -141,7 +144,7 @@
                 </fieldset>
 
                 <fieldset class="border-t pt-6 campo-grupo" data-campos="chaves_keywords">
-                     <legend class="text-xl font-semibold text-gray-700 mb-4">6. Palavras-chave / Keywords<span class="required-asterisk text-red-500 ml-1 hidden">*</span></legend>
+                     <legend class="text-xl font-semibold text-gray-700 mb-4 flex items-center justify-between"><span>6. Palavras-chave / Keywords<span class="required-asterisk text-red-500 ml-1 hidden">*</span></span><span class="text-gray-700 text-sm ml-4">Preencha pelo menos 3 campos</span></legend>
                      <div class="grid md:grid-cols-2 gap-6">
                         <div id="chaves-pt-container" class="space-y-2">
                             <h3 class="font-semibold text-gray-600">Palavras-chave (PT)</h3>
