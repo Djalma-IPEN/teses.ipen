@@ -212,8 +212,8 @@ def gerar_ficha_catalografica(dados, buffer):
     c = canvas.Canvas(buffer, pagesize=A4); width, height = A4; margem_esq = 2.5*cm; largura_texto = width - 2*margem_esq; y = height - 2.5*cm
     styles = getSampleStyleSheet(); style_normal = ParagraphStyle(name='Normal', fontName='Helvetica', fontSize=11, leading=13)
     
-    if dados.get('bolsa'): c.setFont("Helvetica", 11); c.drawString(margem_esq, y, f"Fonte de Financiamento: {dados['bolsa']}"); y -= 25
-    
+    if dados.get('bolsa'): texto_bolsa = f"Fonte de Financiamento: {dados['bolsa']}"; p_bolsa = Paragraph(texto_bolsa, style_normal); w, h = p_bolsa.wrapOn(c, largura_texto, y); p_bolsa.drawOn(c, margem_esq, y-h); y -= h + 25
+
     texto_licenca = f"Autorizo a reprodução e divulgação deste trabalho acadêmico, total ou parcialmente, sob os termos da licença <b>{dados.get('licenca','')}</b>, permitindo seu uso e compartilhamento, desde que os devidos créditos sejam atribuídos e as condições estabelecidas na licença sejam respeitadas."
     p_licenca = Paragraph(texto_licenca, style_normal); w, h = p_licenca.wrapOn(c, largura_texto, y); p_licenca.drawOn(c, margem_esq, y-h); y -= h + 25
     
