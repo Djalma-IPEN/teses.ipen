@@ -322,6 +322,11 @@ def gerar_contracapa(dados, buffer):
 # --- Route Handler ---
 @app.route('/', methods=['GET', 'POST'])
 def formulario():
+    # For GET requests or initial page load, just render the form
+    if request.method == 'GET':
+        return render_template('formulario.html', dados={}), 200
+        
+    # Handle POST requests
     if request.method == 'POST':
         # Configure logging
         import logging
@@ -455,12 +460,13 @@ def formulario():
             response.headers.set('Pragma', 'no-cache')
             response.headers.set('Expires', '0')
             
-            return response
+            # Return the response and immediately end request processing
+            return response, 200
             
         except Exception as e:
             app.logger.error(f"Error during file generation: {str(e)}")
             flash(f'Erro ao gerar arquivo: {str(e)}', 'error')
-            return render_template('formulario.html', dados=dados)
+            return render_template('formulario.html', dados=dados), 200
             
             # Handle file generation and response
             try:
@@ -525,7 +531,8 @@ def formulario():
                 # Retorna os dados originais (antes da limpeza) para o formulário
                 return render_template('formulario.html', dados=request.form.to_dict())
 
-    return render_template('formulario.html', dados={})
+    # This return should never be reached because we handle all cases above
+    return render_template('formulario.html', dados={}), 200
 
 @app.errorhandler(Exception)
 def handle_error(e):
