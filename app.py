@@ -356,12 +356,16 @@ def formulario():
             if len(generated_files) == 1:
                 filename, buffer = list(generated_files.items())[0]
                 buffer.seek(0)  # Important: reset buffer position
-                return send_file(
+                response = send_file(
                     buffer,
                     mimetype='application/pdf',
                     as_attachment=True,
-                    download_name=filename
+                    download_name=filename,
+                    conditional=False  # Prevent caching issues
                 )
+                response.headers['Content-Type'] = 'application/pdf'
+                response.headers['Content-Disposition'] = f'attachment; filename="{filename}"'
+                return response
             else:
                 zip_buffer = io.BytesIO()
                 with zipfile.ZipFile(zip_buffer, 'w', zipfile.ZIP_DEFLATED) as zf:
@@ -369,12 +373,16 @@ def formulario():
                         buffer.seek(0)  # Reset each buffer
                         zf.writestr(filename, buffer.read())
                 zip_buffer.seek(0)  # Reset zip buffer
-                return send_file(
+                response = send_file(
                     zip_buffer,
                     mimetype='application/zip',
                     as_attachment=True,
-                    download_name='documentos_ipen.zip'
+                    download_name='documentos_ipen.zip',
+                    conditional=False  # Prevent caching issues
                 )
+                response.headers['Content-Type'] = 'application/zip'
+                response.headers['Content-Disposition'] = 'attachment; filename="documentos_ipen.zip"'
+                return response
         except Exception as e:
             flash(f'Ocorreu um erro interno ao gerar o PDF: {e}', 'error')
             # Retorna os dados originais (antes da limpeza) para o formulário
