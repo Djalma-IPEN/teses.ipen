@@ -26,6 +26,11 @@ def after_request(response):
     if 'Content-Disposition' in response.headers:
         response.headers.add('Access-Control-Expose-Headers', 'Content-Disposition')
         response.headers.add('Access-Control-Allow-Headers', 'Content-Disposition')
+        # Add additional headers for file downloads
+        if response.mimetype in ['application/zip', 'application/pdf']:
+            response.headers['Content-Description'] = 'File Transfer'
+            response.headers['Content-Transfer-Encoding'] = 'binary'
+            response.headers['Connection'] = 'Keep-Alive'
     
     # Add security headers
     response.headers['X-Content-Type-Options'] = 'nosniff'
@@ -429,12 +434,17 @@ def formulario():
                         zip_buffer.seek(0)
                         app.logger.debug("ZIP file created successfully")
                         
+                        # Prepare response with explicit headers
                         response = send_file(
                             zip_buffer,
                             mimetype='application/zip',
                             as_attachment=True,
                             download_name='documentos_ipen.zip'
                         )
+                        # Add additional headers for better browser compatibility
+                        response.headers['Content-Description'] = 'File Transfer'
+                        response.headers['Content-Transfer-Encoding'] = 'binary'
+                        response.headers['Connection'] = 'Keep-Alive'
                         app.logger.debug("ZIP response created successfully")
                         return response
                     except Exception as e:
@@ -451,6 +461,11 @@ def formulario():
             return render_template('formulario.html', dados=request.form.to_dict())
 
     return render_template('formulario.html', dados={})
+
+@app.errorhandler(Exception)
+def handle_error(e):
+    app.logger.error(f"Unexpected error: {str(e)}")
+    return str(e), 500
 
 if __name__ == '__main__':
     app.run(debug=True)
