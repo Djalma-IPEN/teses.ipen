@@ -355,10 +355,37 @@ def generate_documents(dados, documentos_selecionados):
     
     return generated_files
 
+# --- Helper Functions ---
+def send_file_response(file_obj, filename, mimetype):
+    """Create a file download response with proper headers."""
+    response = send_file(
+        file_obj,
+        mimetype=mimetype,
+        as_attachment=True,
+        download_name=filename,
+        max_age=0,
+        conditional=False
+    )
+    
+    # Set strict headers to prevent caching and ensure download
+    response.headers.update({
+        'Cache-Control': 'no-store, no-cache, must-revalidate, post-check=0, pre-check=0',
+        'Pragma': 'no-cache',
+        'Expires': '0',
+        'Connection': 'close'
+    })
+    
+    return response
+
 # --- Route Handler ---
-@app.route('/', methods=['GET', 'POST'])
+@app.route('/', methods=['GET', 'POST', 'HEAD'])
 def formulario():
     """Main route handler for the form."""
+    # Handle HEAD requests explicitly
+    if request.method == 'HEAD':
+        return '', 200
+
+    # Handle GET requests
     if request.method == 'GET':
         return render_template('formulario.html', dados={})
 
@@ -368,6 +395,7 @@ def formulario():
     app.logger.info(f"Form data: {request.form}")
     
     try:
+        # Get form data and selected documents
         dados = request.form.to_dict()
         documentos_selecionados = request.form.getlist('documentos')
         
@@ -376,16 +404,17 @@ def formulario():
             if isinstance(value, str) and ('<' in value and '>' in value):
                 dados[key] = clean_html_for_reportlab(value)
 
-        # Validate form data
+        # Validate document selection
         if not documentos_selecionados:
             flash('Erro: Você deve selecionar pelo menos um documento para gerar.', 'error')
             return render_template('formulario.html', dados=dados)
 
-        # Validate required fields
+        # Get required fields for selected documents
         campos_necessarios_geral = set()
         for doc in documentos_selecionados:
             campos_necessarios_geral.update(CAMPOS_POR_DOCUMENTO.get(doc, []))
 
+        # Validate required fields
         nomes_amigaveis = {
             "nome_citacao": "Nome do autor para citação",
             "nome_completo": "Nome completo do autor",
@@ -401,24 +430,29 @@ def formulario():
             "titulo_traduzido": "Título do trabalho traduzido"
         }
 
+        # Check basic required fields
         for campo, nome in nomes_amigaveis.items():
             if campo in campos_necessarios_geral and not dados.get(campo):
                 flash(f"Erro: O campo '{nome}' é obrigatório para os documentos selecionados.", 'error')
                 return render_template('formulario.html', dados=dados)
 
+        # Check advisor fields
         if 'orientador_completo' in campos_necessarios_geral:
             if not dados.get('orientador_tipo') or not dados.get('orientador'):
                 flash("Erro: Os campos 'Título do Orientador' e 'Nome do Orientador' são obrigatórios.", 'error')
                 return render_template('formulario.html', dados=dados)
 
+        # Check abstract fields
         if 'resumos' in campos_necessarios_geral:
             if not dados.get('resumo') or not dados.get('abstract'):
                 flash("Erro: Os campos 'Resumo' e 'Abstract' são obrigatórios.", 'error')
                 return render_template('formulario.html', dados=dados)
 
+        # Check keywords
         if 'chaves_keywords' in campos_necessarios_geral:
             chaves_pt = [v for k, v in dados.items() if k.startswith('chave') and v]
             chaves_en = [v for k, v in dados.items() if k.startswith('keyword') and v]
+            
             if any(doc in documentos_selecionados for doc in ['resumo', 'abstract']):
                 if len(chaves_pt) < 3:
                     flash("Erro: É obrigatório preencher pelo menos 3 Palavras-chave (PT).", 'error')
@@ -434,144 +468,39 @@ def formulario():
                     flash("Erro: Pelo menos 3 Keywords (EN) são obrigatórias para a Ficha.", 'error')
                     return render_template('formulario.html', dados=dados)
 
-        # Generate files
-        try:
-            generated_files = generate_documents(dados, documentos_selecionados)
-            
-            if len(generated_files) == 1:
-                # Handle single file
-                filename, buffer = list(generated_files.items())[0]
+        app.logger.debug("Generating documents...")
+        generated_files = generate_documents(dados, documentos_selecionados)
+        app.logger.debug(f"Successfully generated {len(generated_files)} files")
+        
+        # Handle response based on number of files
+        if len(generated_files) == 1:
+            filename, buffer = list(generated_files.items())[0]
+            buffer.seek(0)
+            app.logger.debug(f"Sending single file: {filename}")
+            return send_file_response(buffer, filename, 'application/pdf')
+        
+        # Handle multiple files - create ZIP
+        app.logger.debug("Creating ZIP file")
+        memory_file = io.BytesIO()
+        
+        with zipfile.ZipFile(memory_file, 'w', zipfile.ZIP_DEFLATED) as zf:
+            for filename, buffer in generated_files.items():
+                app.logger.debug(f"Adding {filename} to ZIP")
                 buffer.seek(0)
-                app.logger.debug(f"Sending single file: {filename}")
-                return send_file(
-                    buffer,
-                    mimetype='application/pdf',
-                    as_attachment=True,
-                    download_name=filename
-                )
-            
-            # Handle multiple files - create ZIP
-            app.logger.debug("Creating ZIP file")
-            memory_file = io.BytesIO()
-            
-            with zipfile.ZipFile(memory_file, 'w', zipfile.ZIP_DEFLATED) as zf:
-                for filename, buffer in generated_files.items():
-                    app.logger.debug(f"Adding {filename} to ZIP")
-                    buffer.seek(0)
-                    content = buffer.read()
-                    if not content:
-                        app.logger.error(f"File {filename} is empty")
-                        raise ValueError(f"Generated file {filename} is empty")
-                    zf.writestr(filename, content)
-            
-            memory_file.seek(0)
-            app.logger.debug("ZIP file created successfully")
-            
-            return send_file(
-                memory_file,
-                mimetype='application/zip',
-                as_attachment=True,
-                download_name='documentos_ipen.zip'
-            )
-            
-        except Exception as e:
-            app.logger.error(f"Error during file generation: {str(e)}")
-            flash(f'Erro ao gerar arquivo: {str(e)}', 'error')
-            return render_template('formulario.html', dados=dados)
-            
+                content = buffer.read()
+                if not content:
+                    app.logger.error(f"File {filename} is empty")
+                    raise ValueError(f"Generated file {filename} is empty")
+                zf.writestr(filename, content)
+        
+        memory_file.seek(0)
+        app.logger.debug("ZIP file created successfully")
+        return send_file_response(memory_file, 'documentos_ipen.zip', 'application/zip')
+                
     except Exception as e:
         app.logger.error(f"Error during form processing: {str(e)}")
         flash(f'Erro ao processar formulário: {str(e)}', 'error')
         return render_template('formulario.html', dados=dados)
-
-        documentos_selecionados = request.form.getlist('documentos')
-
-        if not documentos_selecionados:
-            flash('Erro: Você deve selecionar pelo menos um documento para gerar.', 'error')
-            return render_template('formulario.html', dados=dados)
-        
-        campos_necessarios_geral = set()
-        for doc in documentos_selecionados:
-            campos_necessarios_geral.update(CAMPOS_POR_DOCUMENTO.get(doc, []))
-
-        nomes_amigaveis = { "nome_citacao": "Nome do autor para citação", "nome_completo": "Nome completo do autor", "sobrenome": "Último sobrenome do autor", "ano": "Ano de publicação", "paginas": "Número de páginas", "titulo": "Título do trabalho", "idioma": "Idioma principal", "versao": "Versão do trabalho", "nivel": "Nível", "area": "Área de concentração", "licenca": "Licença", "titulo_traduzido": "Título do trabalho traduzido"}
-        for campo, nome in nomes_amigaveis.items():
-            if campo in campos_necessarios_geral and not dados.get(campo):
-                flash(f"Erro: O campo '{nome}' é obrigatório para os documentos selecionados.", 'error')
-                return render_template('formulario.html', dados=dados)
-        
-        if 'orientador_completo' in campos_necessarios_geral:
-            if not dados.get('orientador_tipo') or not dados.get('orientador'):
-                flash("Erro: Os campos 'Título do Orientador' e 'Nome do Orientador' são obrigatórios.", 'error')
-                return render_template('formulario.html', dados=dados)
-        
-        if 'resumos' in campos_necessarios_geral:
-             if not dados.get('resumo') or not dados.get('abstract'):
-                flash("Erro: Os campos 'Resumo' e 'Abstract' são obrigatórios.", 'error')
-                return render_template('formulario.html', dados=dados)
-
-        if 'chaves_keywords' in campos_necessarios_geral:
-            chaves_pt = [v for k, v in dados.items() if k.startswith('chave') and v]
-            chaves_en = [v for k, v in dados.items() if k.startswith('keyword') and v]
-            if any(doc in documentos_selecionados for doc in ['resumo', 'abstract']):
-                if len(chaves_pt) < 3: flash("Erro: É obrigatório preencher pelo menos 3 Palavras-chave (PT).", 'error'); return render_template('formulario.html', dados=dados)
-                if len(chaves_en) < 3: flash("Erro: É obrigatório preencher pelo menos 3 Keywords (EN).", 'error'); return render_template('formulario.html', dados=dados)
-            elif 'ficha' in documentos_selecionados:
-                if dados.get('idioma') == 'Português' and len(chaves_pt) < 3: flash("Erro: Pelo menos 3 Palavras-chave (PT) são obrigatórias para a Ficha.", 'error'); return render_template('formulario.html', dados=dados)
-                if dados.get('idioma') == 'Inglês' and len(chaves_en) < 3: flash("Erro: Pelo menos 3 Keywords (EN) são obrigatórias para a Ficha.", 'error'); return render_template('formulario.html', dados=dados)
-
-        # Validate form data
-        if not documentos_selecionados:
-            flash('Erro: Você deve selecionar pelo menos um documento para gerar.', 'error')
-            return render_template('formulario.html', dados=dados)
-        
-        # Generate documents
-        try:
-            # Generate files
-            generated_files = generate_documents(dados, documentos_selecionados)
-            app.logger.debug(f"Number of generated files: {len(generated_files)}")
-            
-            # Handle response based on number of files
-            if len(generated_files) == 1:
-                filename, buffer = list(generated_files.items())[0]
-                buffer.seek(0)
-                app.logger.debug(f"Sending single file: {filename}")
-                
-                return send_file(
-                    buffer,
-                    mimetype='application/pdf',
-                    as_attachment=True,
-                    download_name=filename
-                )
-            else:
-                # Create ZIP file for multiple files
-                app.logger.debug("Creating ZIP file")
-                memory_file = io.BytesIO()
-                
-                with zipfile.ZipFile(memory_file, 'w', zipfile.ZIP_DEFLATED) as zf:
-                    for filename, buffer in generated_files.items():
-                        app.logger.debug(f"Adding {filename} to ZIP")
-                        buffer.seek(0)
-                        content = buffer.read()
-                        if not content:
-                            app.logger.error(f"File {filename} is empty")
-                            raise ValueError(f"Generated file {filename} is empty")
-                        zf.writestr(filename, content)
-                
-                memory_file.seek(0)
-                app.logger.debug("ZIP file created successfully")
-                
-                return send_file(
-                    memory_file,
-                    mimetype='application/zip',
-                    as_attachment=True,
-                    download_name='documentos_ipen.zip'
-                )
-        
-        except Exception as e:
-            app.logger.error(f"Error during file generation: {str(e)}")
-            flash(f'Erro ao gerar arquivo: {str(e)}', 'error')
-            return render_template('formulario.html', dados=dados)
 
 
     # This return should never be reached because we handle all cases above
