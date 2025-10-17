@@ -1,7 +1,7 @@
 import os
 import io
 import zipfile
-from flask import Flask, render_template, request, send_file, flash
+from flask import Flask, render_template, request, send_file, flash, make_response
 from bs4 import BeautifulSoup, NavigableString
 
 # --- Imports do ReportLab ---
@@ -319,17 +319,13 @@ def gerar_contracapa(dados, buffer):
     p.drawOn(c, 2*cm, b_margin + 4*cm)
     c.save()
 
+# --- Route Handler ---
 @app.route('/', methods=['GET', 'POST'])
 def formulario():
-    # Enable debug logging
-    if not app.debug:
-        app.debug = True
-    
-    # Configure logging
-    import logging
-    logging.basicConfig(level=logging.DEBUG)
-    
     if request.method == 'POST':
+        # Configure logging
+        import logging
+        logging.basicConfig(level=logging.DEBUG)
         # Log request information
         app.logger.info("Received POST request")
         app.logger.info(f"Content-Type: {request.content_type}")
@@ -390,68 +386,60 @@ def formulario():
                 buffer = io.BytesIO(); (gerar_abstract if idioma_principal == 'Português' else gerar_resumo)(dados, idioma_principal, buffer)
                 buffer.seek(0); generated_files['abstract.pdf'] = buffer
             
-            try:
-                app.logger.debug(f"Number of generated files: {len(generated_files)}")
-                if len(generated_files) == 1:
-                    filename, buffer = list(generated_files.items())[0]
-                    buffer.seek(0)
-                    app.logger.debug(f"Sending single file: {filename}")
-                    
-                    # Ensure buffer has content
-                    content = buffer.read()
-                    if not content:
-                        app.logger.error("Generated PDF is empty")
-                        raise ValueError("Generated PDF is empty")
-                    buffer.seek(0)
-                    
+                    # Handle file generation and response
                     try:
-                        response = send_file(
-                            buffer,
-                            mimetype='application/pdf',
-                            as_attachment=True,
-                            download_name=filename
-                        )
-                        app.logger.debug("PDF response created successfully")
-                        return response
-                    except Exception as e:
-                        app.logger.error(f"Error sending PDF file: {str(e)}")
-                        raise
-                else:
-                    app.logger.debug("Creating ZIP file")
-                    zip_buffer = io.BytesIO()
-                    
-                    try:
-                        with zipfile.ZipFile(zip_buffer, 'w', zipfile.ZIP_DEFLATED) as zf:
-                            for filename, buffer in generated_files.items():
-                                app.logger.debug(f"Adding {filename} to ZIP")
-                                buffer.seek(0)
-                                content = buffer.read()
-                                if not content:
-                                    app.logger.error(f"File {filename} is empty")
-                                    raise ValueError(f"Generated file {filename} is empty")
-                                zf.writestr(filename, content)
+                        app.logger.debug(f"Number of generated files: {len(generated_files)}")
                         
-                        zip_buffer.seek(0)
-                        app.logger.debug("ZIP file created successfully")
+                        if len(generated_files) == 1:
+                            # Handle single file
+                            filename, buffer = list(generated_files.items())[0]
+                            buffer.seek(0)
+                            app.logger.debug(f"Preparing single file: {filename}")
+                            
+                            content = buffer.read()
+                            if not content:
+                                app.logger.error("Generated PDF is empty")
+                                raise ValueError("Generated PDF is empty")
+                            
+                            response = make_response(content)
+                            response.headers.set('Content-Type', 'application/pdf')
+                            response.headers.set('Content-Disposition', f'attachment; filename="{filename}"')
+                            response.headers.set('Content-Description', 'File Transfer')
+                            response.headers.set('Content-Transfer-Encoding', 'binary')
+                            response.headers.set('Content-Length', str(len(content)))
+                            app.logger.debug("PDF response prepared successfully")
+                        else:
+                            # Handle multiple files - create ZIP
+                            app.logger.debug("Creating ZIP file")
+                            memory_file = io.BytesIO()
+                            
+                            with zipfile.ZipFile(memory_file, 'w', zipfile.ZIP_DEFLATED) as zf:
+                                for filename, buffer in generated_files.items():
+                                    app.logger.debug(f"Adding {filename} to ZIP")
+                                    buffer.seek(0)
+                                    content = buffer.read()
+                                    if not content:
+                                        app.logger.error(f"File {filename} is empty")
+                                        raise ValueError(f"Generated file {filename} is empty")
+                                    zf.writestr(filename, content)
+                            
+                            zip_content = memory_file.getvalue()
+                            app.logger.debug("ZIP file created successfully")
+                            
+                            response = make_response(zip_content)
+                            response.headers.set('Content-Type', 'application/zip')
+                            response.headers.set('Content-Disposition', 'attachment; filename="documentos_ipen.zip"')
+                            response.headers.set('Content-Description', 'File Transfer')
+                            response.headers.set('Content-Transfer-Encoding', 'binary')
+                            response.headers.set('Content-Length', str(len(zip_content)))
+                            app.logger.debug("ZIP response prepared successfully")
                         
-                        # Prepare response with explicit headers
-                        response = send_file(
-                            zip_buffer,
-                            mimetype='application/zip',
-                            as_attachment=True,
-                            download_name='documentos_ipen.zip'
-                        )
-                        # Add additional headers for better browser compatibility
-                        response.headers['Content-Description'] = 'File Transfer'
-                        response.headers['Content-Transfer-Encoding'] = 'binary'
-                        response.headers['Connection'] = 'Keep-Alive'
-                        app.logger.debug("ZIP response created successfully")
-                        return response
-                    except Exception as e:
-                        app.logger.error(f"Error creating ZIP file: {str(e)}")
-                        raise
-                    
-            except Exception as e:
+                        # Set additional headers for all responses
+                        response.headers.set('Cache-Control', 'no-cache, no-store, must-revalidate')
+                        response.headers.set('Pragma', 'no-cache')
+                        response.headers.set('Expires', '0')
+                        
+                        return response            except Exception as e:
                 app.logger.error(f"Error during file generation: {str(e)}")
                 flash(f'Erro ao gerar arquivo: {str(e)}', 'error')
                 return render_template('formulario.html', dados=dados)
