@@ -25,6 +25,17 @@ def after_request(response):
     # Ensure proper headers for file downloads
     if 'Content-Disposition' in response.headers:
         response.headers.add('Access-Control-Expose-Headers', 'Content-Disposition')
+        response.headers.add('Access-Control-Allow-Headers', 'Content-Disposition')
+    
+    # Add security headers
+    response.headers['X-Content-Type-Options'] = 'nosniff'
+    response.headers['Cache-Control'] = 'no-cache, no-store, must-revalidate'
+    response.headers['Pragma'] = 'no-cache'
+    response.headers['Expires'] = '0'
+    
+    # Log response headers for debugging
+    app.logger.debug(f"Response headers: {dict(response.headers)}")
+    
     return response
 
 # --- Dicionário de Campos Necessários (para validação) ---
@@ -309,6 +320,10 @@ def formulario():
     if not app.debug:
         app.debug = True
     
+    # Configure logging
+    import logging
+    logging.basicConfig(level=logging.DEBUG)
+    
     if request.method == 'POST':
         # Log request information
         app.logger.info("Received POST request")
@@ -371,57 +386,62 @@ def formulario():
                 buffer.seek(0); generated_files['abstract.pdf'] = buffer
             
             try:
+                app.logger.debug(f"Number of generated files: {len(generated_files)}")
                 if len(generated_files) == 1:
                     filename, buffer = list(generated_files.items())[0]
-                    buffer.seek(0)  # Important: reset buffer position
+                    buffer.seek(0)
+                    app.logger.debug(f"Sending single file: {filename}")
                     
                     # Ensure buffer has content
                     content = buffer.read()
                     if not content:
+                        app.logger.error("Generated PDF is empty")
                         raise ValueError("Generated PDF is empty")
-                    buffer.seek(0)  # Reset after reading
+                    buffer.seek(0)
                     
-                    # Set explicit response parameters
-                    response = send_file(
-                        buffer,
-                        mimetype='application/pdf',
-                        as_attachment=True,
-                        download_name=filename
-                    )
-                    # Force download headers
-                    response.headers.set('Content-Type', 'application/pdf')
-                    response.headers.set('Content-Disposition', f'attachment; filename="{filename}"')
-                    response.headers.set('Cache-Control', 'no-cache, no-store, must-revalidate')
-                    response.headers.set('Pragma', 'no-cache')
-                    response.headers.set('Expires', '0')
-                    return response
+                    try:
+                        response = send_file(
+                            buffer,
+                            mimetype='application/pdf',
+                            as_attachment=True,
+                            download_name=filename,
+                            cache_timeout=0
+                        )
+                        app.logger.debug("PDF response created successfully")
+                        return response
+                    except Exception as e:
+                        app.logger.error(f"Error sending PDF file: {str(e)}")
+                        raise
                 else:
-                    # Create zip file
+                    app.logger.debug("Creating ZIP file")
                     zip_buffer = io.BytesIO()
-                    with zipfile.ZipFile(zip_buffer, 'w', zipfile.ZIP_DEFLATED) as zf:
-                        for filename, buffer in generated_files.items():
-                            buffer.seek(0)
-                            content = buffer.read()
-                            if not content:
-                                raise ValueError(f"Generated file {filename} is empty")
-                            zf.writestr(filename, content)
                     
-                    zip_buffer.seek(0)
-                    
-                    # Set explicit response parameters for zip
-                    response = send_file(
-                        zip_buffer,
-                        mimetype='application/zip',
-                        as_attachment=True,
-                        download_name='documentos_ipen.zip'
-                    )
-                    # Force download headers
-                    response.headers.set('Content-Type', 'application/zip')
-                    response.headers.set('Content-Disposition', 'attachment; filename="documentos_ipen.zip"')
-                    response.headers.set('Cache-Control', 'no-cache, no-store, must-revalidate')
-                    response.headers.set('Pragma', 'no-cache')
-                    response.headers.set('Expires', '0')
-                    return response
+                    try:
+                        with zipfile.ZipFile(zip_buffer, 'w', zipfile.ZIP_DEFLATED) as zf:
+                            for filename, buffer in generated_files.items():
+                                app.logger.debug(f"Adding {filename} to ZIP")
+                                buffer.seek(0)
+                                content = buffer.read()
+                                if not content:
+                                    app.logger.error(f"File {filename} is empty")
+                                    raise ValueError(f"Generated file {filename} is empty")
+                                zf.writestr(filename, content)
+                        
+                        zip_buffer.seek(0)
+                        app.logger.debug("ZIP file created successfully")
+                        
+                        response = send_file(
+                            zip_buffer,
+                            mimetype='application/zip',
+                            as_attachment=True,
+                            download_name='documentos_ipen.zip',
+                            cache_timeout=0
+                        )
+                        app.logger.debug("ZIP response created successfully")
+                        return response
+                    except Exception as e:
+                        app.logger.error(f"Error creating ZIP file: {str(e)}")
+                        raise
                     
             except Exception as e:
                 app.logger.error(f"Error during file generation: {str(e)}")
