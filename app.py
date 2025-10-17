@@ -404,8 +404,7 @@ def formulario():
                             buffer,
                             mimetype='application/pdf',
                             as_attachment=True,
-                            download_name=filename,
-                            cache_timeout=0
+                            download_name=filename
                         )
                         app.logger.debug("PDF response created successfully")
                         return response
@@ -434,8 +433,7 @@ def formulario():
                             zip_buffer,
                             mimetype='application/zip',
                             as_attachment=True,
-                            download_name='documentos_ipen.zip',
-                            cache_timeout=0
+                            download_name='documentos_ipen.zip'
                         )
                         app.logger.debug("ZIP response created successfully")
                         return response
