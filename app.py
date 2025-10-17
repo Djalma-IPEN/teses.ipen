@@ -17,6 +17,15 @@ from reportlab.lib.colors import black, blue
 # --- Inicialização do Flask ---
 app = Flask(__name__)
 app.secret_key = 'sua-chave-secreta-muito-segura'
+app.config['MAX_CONTENT_LENGTH'] = 16 * 1024 * 1024  # 16MB max file size
+app.config['SEND_FILE_MAX_AGE_DEFAULT'] = 0  # Disable caching
+
+@app.after_request
+def after_request(response):
+    # Ensure proper headers for file downloads
+    if 'Content-Disposition' in response.headers:
+        response.headers.add('Access-Control-Expose-Headers', 'Content-Disposition')
+    return response
 
 # --- Dicionário de Campos Necessários (para validação) ---
 CAMPOS_POR_DOCUMENTO = {
@@ -296,7 +305,15 @@ def gerar_contracapa(dados, buffer):
 
 @app.route('/', methods=['GET', 'POST'])
 def formulario():
+    # Enable debug logging
+    if not app.debug:
+        app.debug = True
+    
     if request.method == 'POST':
+        # Log request information
+        app.logger.info("Received POST request")
+        app.logger.info(f"Content-Type: {request.content_type}")
+        app.logger.info(f"Form data: {request.form}")
         dados = request.form.to_dict()
         
         # **ETAPA DE LIMPEZA DE HTML**
@@ -353,36 +370,63 @@ def formulario():
                 buffer = io.BytesIO(); (gerar_abstract if idioma_principal == 'Português' else gerar_resumo)(dados, idioma_principal, buffer)
                 buffer.seek(0); generated_files['abstract.pdf'] = buffer
             
-            if len(generated_files) == 1:
-                filename, buffer = list(generated_files.items())[0]
-                buffer.seek(0)  # Important: reset buffer position
-                response = send_file(
-                    buffer,
-                    mimetype='application/pdf',
-                    as_attachment=True,
-                    download_name=filename,
-                    conditional=False  # Prevent caching issues
-                )
-                response.headers['Content-Type'] = 'application/pdf'
-                response.headers['Content-Disposition'] = f'attachment; filename="{filename}"'
-                return response
-            else:
-                zip_buffer = io.BytesIO()
-                with zipfile.ZipFile(zip_buffer, 'w', zipfile.ZIP_DEFLATED) as zf:
-                    for filename, buffer in generated_files.items():
-                        buffer.seek(0)  # Reset each buffer
-                        zf.writestr(filename, buffer.read())
-                zip_buffer.seek(0)  # Reset zip buffer
-                response = send_file(
-                    zip_buffer,
-                    mimetype='application/zip',
-                    as_attachment=True,
-                    download_name='documentos_ipen.zip',
-                    conditional=False  # Prevent caching issues
-                )
-                response.headers['Content-Type'] = 'application/zip'
-                response.headers['Content-Disposition'] = 'attachment; filename="documentos_ipen.zip"'
-                return response
+            try:
+                if len(generated_files) == 1:
+                    filename, buffer = list(generated_files.items())[0]
+                    buffer.seek(0)  # Important: reset buffer position
+                    
+                    # Ensure buffer has content
+                    content = buffer.read()
+                    if not content:
+                        raise ValueError("Generated PDF is empty")
+                    buffer.seek(0)  # Reset after reading
+                    
+                    # Set explicit response parameters
+                    response = send_file(
+                        buffer,
+                        mimetype='application/pdf',
+                        as_attachment=True,
+                        download_name=filename
+                    )
+                    # Force download headers
+                    response.headers.set('Content-Type', 'application/pdf')
+                    response.headers.set('Content-Disposition', f'attachment; filename="{filename}"')
+                    response.headers.set('Cache-Control', 'no-cache, no-store, must-revalidate')
+                    response.headers.set('Pragma', 'no-cache')
+                    response.headers.set('Expires', '0')
+                    return response
+                else:
+                    # Create zip file
+                    zip_buffer = io.BytesIO()
+                    with zipfile.ZipFile(zip_buffer, 'w', zipfile.ZIP_DEFLATED) as zf:
+                        for filename, buffer in generated_files.items():
+                            buffer.seek(0)
+                            content = buffer.read()
+                            if not content:
+                                raise ValueError(f"Generated file {filename} is empty")
+                            zf.writestr(filename, content)
+                    
+                    zip_buffer.seek(0)
+                    
+                    # Set explicit response parameters for zip
+                    response = send_file(
+                        zip_buffer,
+                        mimetype='application/zip',
+                        as_attachment=True,
+                        download_name='documentos_ipen.zip'
+                    )
+                    # Force download headers
+                    response.headers.set('Content-Type', 'application/zip')
+                    response.headers.set('Content-Disposition', 'attachment; filename="documentos_ipen.zip"')
+                    response.headers.set('Cache-Control', 'no-cache, no-store, must-revalidate')
+                    response.headers.set('Pragma', 'no-cache')
+                    response.headers.set('Expires', '0')
+                    return response
+                    
+            except Exception as e:
+                app.logger.error(f"Error during file generation: {str(e)}")
+                flash(f'Erro ao gerar arquivo: {str(e)}', 'error')
+                return render_template('formulario.html', dados=dados)
         except Exception as e:
             flash(f'Ocorreu um erro interno ao gerar o PDF: {e}', 'error')
             # Retorna os dados originais (antes da limpeza) para o formulário
